@@ -18,42 +18,48 @@ void Button::ApplyStyle(const ButtonStyle& InStyle) {
 }
 
 bool Button::UpdateInteractionState(const Platform::InputState& Input) {
+    bool Consumed = false;
+
     if (!IsEnabled) {
         CurrentState = InteractionState::Disabled;
         PressedInside = false;
-        return false;
-    }
-
-    const bool Hovered = PointInRect(Input.MousePosition, ArrangedRect);
-    const bool Down     = Input.MouseButtonDown[LeftButton];
-    const bool Pressed  = Input.MouseButtonPressedThisFrame[LeftButton];
-    const bool Released = Input.MouseButtonReleasedThisFrame[LeftButton];
-
-    if (Pressed && Hovered) {
-        PressedInside = true;
-    }
-
-    // Click fires on release, but only if the press both began and ended on the
-    // button — dragging off and releasing cancels it.
-    bool Clicked = false;
-    if (Released) {
-        Clicked = PressedInside && Hovered;
-        PressedInside = false;
-    }
-
-    if (PressedInside && Down && Hovered) {
-        CurrentState = InteractionState::Pressed;
-    } else if (Hovered) {
-        CurrentState = InteractionState::Hovered;
     } else {
-        CurrentState = InteractionState::Default;
+        const bool Hovered = PointInRect(Input.MousePosition, ArrangedRect);
+        const bool Down     = Input.MouseButtonDown[LeftButton];
+        const bool Pressed  = Input.MouseButtonPressedThisFrame[LeftButton];
+        const bool Released = Input.MouseButtonReleasedThisFrame[LeftButton];
+
+        if (Pressed && Hovered) {
+            PressedInside = true;
+        }
+
+        // Click fires on release, but only if the press both began and ended on the
+        // button — dragging off and releasing cancels it.
+        bool Clicked = false;
+        if (Released) {
+            Clicked = PressedInside && Hovered;
+            PressedInside = false;
+        }
+
+        if (PressedInside && Down && Hovered) {
+            CurrentState = InteractionState::Pressed;
+        } else if (Hovered) {
+            CurrentState = InteractionState::Hovered;
+        } else {
+            CurrentState = InteractionState::Default;
+        }
+
+        if (Clicked && OnClicked) {
+            OnClicked();
+        }
+
+        Consumed = Hovered || (PressedInside && Down);
     }
 
-    if (Clicked && OnClicked) {
-        OnClicked();
-    }
-
-    return Hovered || (PressedInside && Down);
+    // Advance the background easing every frame, in every state, so transitions
+    // (including enable/disable) animate smoothly.
+    BackgroundAnim.Animate(BackgroundForState(), Input.DeltaTimeSeconds, BackgroundTransitionSeconds);
+    return Consumed;
 }
 
 SDL_Color Button::BackgroundForState() const {
@@ -67,8 +73,8 @@ SDL_Color Button::BackgroundForState() const {
 }
 
 void Button::Draw(Render::Renderer& Renderer) {
-    // Swap in the state background, reuse Box's drawing, then restore.
-    const SDL_Color Chosen = BackgroundForState();
+    // Swap in the eased state background, reuse Box's drawing, then restore.
+    const SDL_Color Chosen = BackgroundAnim.Initialised ? BackgroundAnim.Value() : BackgroundForState();
     const SDL_Color Saved = Style.ColorBackground;
     Style.ColorBackground = Chosen;
     Box::Draw(Renderer);

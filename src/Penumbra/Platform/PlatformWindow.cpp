@@ -29,6 +29,7 @@ bool PlatformWindow::Initialise(const char* Title, int LogicalWidth, int Logical
         DpiScaleFactor = 1.0f;
     }
 
+    LastFrameTimeNs = SDL_GetTicksNS();
     return true;
 }
 
@@ -45,6 +46,14 @@ void PlatformWindow::Shutdown() {
 }
 
 bool PlatformWindow::PumpEventsAndBuildInput(InputState& OutInputState) {
+    const Uint64 Now = SDL_GetTicksNS();
+    float Delta = static_cast<float>(static_cast<double>(Now - LastFrameTimeNs) / 1.0e9);
+    LastFrameTimeNs = Now;
+    if (Delta > 0.1f) {
+        Delta = 0.1f; // clamp pauses (e.g. a stalled frame) so animations don't jump
+    }
+    OutInputState.DeltaTimeSeconds = Delta;
+
     OutInputState.TextInputThisFrame.clear();
     OutInputState.KeysPressedThisFrame.clear();
     OutInputState.MouseWheelDelta = 0.0f;

@@ -96,6 +96,7 @@ int main() {
             Btn->Layout         = LayoutMode::HorizontalStack; // measure + place the label child
             Btn->CrossAlignment = CrossAlign::Center;
             Btn->OnClicked      = std::move(OnClick);
+            Btn->BackgroundTransitionSeconds = Theme.AnimColorSeconds;
             Btn->AddChild(MakeLabel(Text, Style.ColorLabel)); // resolver decides the label colour
             return Btn;
         };

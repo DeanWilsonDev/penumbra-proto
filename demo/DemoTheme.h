@@ -30,6 +30,8 @@ struct Theme {
     float DragSensitivity    = 0.05f;  // value change per logical px dragged
     float FieldWidthSmall    = 160.0f; // min width for numeric/text fields
     float SeparatorThickness = 2.0f;   // height of a separator Box
+
+    float AnimColorSeconds   = 0.09f;  // easing time constant for hover/press colours
 };
 
 } // namespace Demo

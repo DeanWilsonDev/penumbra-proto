@@ -1018,6 +1018,7 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Box.cpp.o: /home/deanwilson/develop
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
 
 CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Button.cpp.o: /home/deanwilson/development/projects/penumbra-proto/src/Penumbra/Widgets/Button.cpp \
+  /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Anim/Animation.h \
   /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Platform/InputState.h \
   /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Render/IFontBackend.h \
   /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Render/Renderer.h \
@@ -1105,9 +1106,19 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Button.cpp.o: /home/deanwilson/deve
   /usr/include/bits/errno.h \
   /usr/include/bits/floatn-common.h \
   /usr/include/bits/floatn.h \
+  /usr/include/bits/flt-eval-method.h \
+  /usr/include/bits/fp-fast.h \
+  /usr/include/bits/fp-logb.h \
+  /usr/include/bits/iscanonical.h \
   /usr/include/bits/libc-header-start.h \
+  /usr/include/bits/libm-simd-decl-stubs.h \
   /usr/include/bits/locale.h \
   /usr/include/bits/long-double.h \
+  /usr/include/bits/math-vector.h \
+  /usr/include/bits/mathcalls-helper-functions.h \
+  /usr/include/bits/mathcalls-macros.h \
+  /usr/include/bits/mathcalls-narrow.h \
+  /usr/include/bits/mathcalls.h \
   /usr/include/bits/pthread_stack_min-dynamic.h \
   /usr/include/bits/pthreadtypes-arch.h \
   /usr/include/bits/pthreadtypes.h \
@@ -1158,10 +1169,12 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Button.cpp.o: /home/deanwilson/deve
   /usr/include/bits/wchar.h \
   /usr/include/bits/wctype-wchar.h \
   /usr/include/bits/wordsize.h \
+  /usr/include/c++/16.1.1/algorithm \
   /usr/include/c++/16.1.1/array \
   /usr/include/c++/16.1.1/backward/auto_ptr.h \
   /usr/include/c++/16.1.1/backward/binders.h \
   /usr/include/c++/16.1.1/bit \
+  /usr/include/c++/16.1.1/bits/algorithmfwd.h \
   /usr/include/c++/16.1.1/bits/align.h \
   /usr/include/c++/16.1.1/bits/alloc_traits.h \
   /usr/include/c++/16.1.1/bits/allocated_ptr.h \
@@ -1213,6 +1226,7 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Button.cpp.o: /home/deanwilson/deve
   /usr/include/c++/16.1.1/bits/predefined_ops.h \
   /usr/include/c++/16.1.1/bits/ptr_traits.h \
   /usr/include/c++/16.1.1/bits/range_access.h \
+  /usr/include/c++/16.1.1/bits/ranges_algo.h \
   /usr/include/c++/16.1.1/bits/ranges_algobase.h \
   /usr/include/c++/16.1.1/bits/ranges_base.h \
   /usr/include/c++/16.1.1/bits/ranges_cmp.h \
@@ -1223,15 +1237,18 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Button.cpp.o: /home/deanwilson/deve
   /usr/include/c++/16.1.1/bits/shared_ptr.h \
   /usr/include/c++/16.1.1/bits/shared_ptr_atomic.h \
   /usr/include/c++/16.1.1/bits/shared_ptr_base.h \
+  /usr/include/c++/16.1.1/bits/specfun.h \
   /usr/include/c++/16.1.1/bits/std_abs.h \
   /usr/include/c++/16.1.1/bits/std_function.h \
   /usr/include/c++/16.1.1/bits/stdexcept_except.h \
   /usr/include/c++/16.1.1/bits/stdexcept_throw.h \
   /usr/include/c++/16.1.1/bits/stdexcept_throwfwd.h \
+  /usr/include/c++/16.1.1/bits/stl_algo.h \
   /usr/include/c++/16.1.1/bits/stl_algobase.h \
   /usr/include/c++/16.1.1/bits/stl_bvector.h \
   /usr/include/c++/16.1.1/bits/stl_construct.h \
   /usr/include/c++/16.1.1/bits/stl_function.h \
+  /usr/include/c++/16.1.1/bits/stl_heap.h \
   /usr/include/c++/16.1.1/bits/stl_iterator.h \
   /usr/include/c++/16.1.1/bits/stl_iterator_base_funcs.h \
   /usr/include/c++/16.1.1/bits/stl_iterator_base_types.h \
@@ -1244,6 +1261,7 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Button.cpp.o: /home/deanwilson/deve
   /usr/include/c++/16.1.1/bits/streambuf_iterator.h \
   /usr/include/c++/16.1.1/bits/string_view.tcc \
   /usr/include/c++/16.1.1/bits/stringfwd.h \
+  /usr/include/c++/16.1.1/bits/uniform_int_dist.h \
   /usr/include/c++/16.1.1/bits/unique_ptr.h \
   /usr/include/c++/16.1.1/bits/unordered_map.h \
   /usr/include/c++/16.1.1/bits/uses_allocator.h \
@@ -1254,6 +1272,7 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Button.cpp.o: /home/deanwilson/deve
   /usr/include/c++/16.1.1/cctype \
   /usr/include/c++/16.1.1/cerrno \
   /usr/include/c++/16.1.1/clocale \
+  /usr/include/c++/16.1.1/cmath \
   /usr/include/c++/16.1.1/compare \
   /usr/include/c++/16.1.1/concepts \
   /usr/include/c++/16.1.1/cstddef \
@@ -1281,6 +1300,7 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Button.cpp.o: /home/deanwilson/deve
   /usr/include/c++/16.1.1/new \
   /usr/include/c++/16.1.1/numbers \
   /usr/include/c++/16.1.1/pstl/execution_defs.h \
+  /usr/include/c++/16.1.1/pstl/glue_algorithm_defs.h \
   /usr/include/c++/16.1.1/pstl/glue_memory_defs.h \
   /usr/include/c++/16.1.1/pstl/pstl_config.h \
   /usr/include/c++/16.1.1/stdexcept \
@@ -1288,6 +1308,18 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Button.cpp.o: /home/deanwilson/deve
   /usr/include/c++/16.1.1/string \
   /usr/include/c++/16.1.1/string_view \
   /usr/include/c++/16.1.1/system_error \
+  /usr/include/c++/16.1.1/tr1/bessel_function.tcc \
+  /usr/include/c++/16.1.1/tr1/beta_function.tcc \
+  /usr/include/c++/16.1.1/tr1/ell_integral.tcc \
+  /usr/include/c++/16.1.1/tr1/exp_integral.tcc \
+  /usr/include/c++/16.1.1/tr1/gamma.tcc \
+  /usr/include/c++/16.1.1/tr1/hypergeometric.tcc \
+  /usr/include/c++/16.1.1/tr1/legendre_function.tcc \
+  /usr/include/c++/16.1.1/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/16.1.1/tr1/poly_hermite.tcc \
+  /usr/include/c++/16.1.1/tr1/poly_laguerre.tcc \
+  /usr/include/c++/16.1.1/tr1/riemann_zeta.tcc \
+  /usr/include/c++/16.1.1/tr1/special_function_util.h \
   /usr/include/c++/16.1.1/tuple \
   /usr/include/c++/16.1.1/type_traits \
   /usr/include/c++/16.1.1/typeinfo \
@@ -1317,6 +1349,7 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Button.cpp.o: /home/deanwilson/deve
   /usr/include/linux/stddef.h \
   /usr/include/linux/types.h \
   /usr/include/locale.h \
+  /usr/include/math.h \
   /usr/include/pthread.h \
   /usr/include/sched.h \
   /usr/include/stdc-predef.h \
@@ -3120,6 +3153,8 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 /usr/include/linux/posix_types.h:
 
 /usr/include/bits/types/FILE.h:
+
+/home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Anim/Animation.h:
 
 /usr/include/bits/flt-eval-method.h:
 

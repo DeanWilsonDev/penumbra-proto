@@ -208,6 +208,7 @@ CMakeFiles/penumbra_demo.dir/demo/DemoTheme.cpp.o: /home/deanwilson/development/
 CMakeFiles/penumbra_demo.dir/demo/main.cpp.o: /home/deanwilson/development/projects/penumbra-proto/demo/main.cpp \
   /home/deanwilson/development/projects/penumbra-proto/demo/DemoResolvers.h \
   /home/deanwilson/development/projects/penumbra-proto/demo/DemoTheme.h \
+  /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Anim/Animation.h \
   /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Platform/InputState.h \
   /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Platform/PlatformWindow.h \
   /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Render/IFontBackend.h \
@@ -304,9 +305,19 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o: /home/deanwilson/development/proje
   /usr/include/bits/errno.h \
   /usr/include/bits/floatn-common.h \
   /usr/include/bits/floatn.h \
+  /usr/include/bits/flt-eval-method.h \
+  /usr/include/bits/fp-fast.h \
+  /usr/include/bits/fp-logb.h \
+  /usr/include/bits/iscanonical.h \
   /usr/include/bits/libc-header-start.h \
+  /usr/include/bits/libm-simd-decl-stubs.h \
   /usr/include/bits/locale.h \
   /usr/include/bits/long-double.h \
+  /usr/include/bits/math-vector.h \
+  /usr/include/bits/mathcalls-helper-functions.h \
+  /usr/include/bits/mathcalls-macros.h \
+  /usr/include/bits/mathcalls-narrow.h \
+  /usr/include/bits/mathcalls.h \
   /usr/include/bits/pthread_stack_min-dynamic.h \
   /usr/include/bits/pthreadtypes-arch.h \
   /usr/include/bits/pthreadtypes.h \
@@ -357,10 +368,12 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o: /home/deanwilson/development/proje
   /usr/include/bits/wchar.h \
   /usr/include/bits/wctype-wchar.h \
   /usr/include/bits/wordsize.h \
+  /usr/include/c++/16.1.1/algorithm \
   /usr/include/c++/16.1.1/array \
   /usr/include/c++/16.1.1/backward/auto_ptr.h \
   /usr/include/c++/16.1.1/backward/binders.h \
   /usr/include/c++/16.1.1/bit \
+  /usr/include/c++/16.1.1/bits/algorithmfwd.h \
   /usr/include/c++/16.1.1/bits/align.h \
   /usr/include/c++/16.1.1/bits/alloc_traits.h \
   /usr/include/c++/16.1.1/bits/allocated_ptr.h \
@@ -412,6 +425,7 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o: /home/deanwilson/development/proje
   /usr/include/c++/16.1.1/bits/predefined_ops.h \
   /usr/include/c++/16.1.1/bits/ptr_traits.h \
   /usr/include/c++/16.1.1/bits/range_access.h \
+  /usr/include/c++/16.1.1/bits/ranges_algo.h \
   /usr/include/c++/16.1.1/bits/ranges_algobase.h \
   /usr/include/c++/16.1.1/bits/ranges_base.h \
   /usr/include/c++/16.1.1/bits/ranges_cmp.h \
@@ -422,15 +436,18 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o: /home/deanwilson/development/proje
   /usr/include/c++/16.1.1/bits/shared_ptr.h \
   /usr/include/c++/16.1.1/bits/shared_ptr_atomic.h \
   /usr/include/c++/16.1.1/bits/shared_ptr_base.h \
+  /usr/include/c++/16.1.1/bits/specfun.h \
   /usr/include/c++/16.1.1/bits/std_abs.h \
   /usr/include/c++/16.1.1/bits/std_function.h \
   /usr/include/c++/16.1.1/bits/stdexcept_except.h \
   /usr/include/c++/16.1.1/bits/stdexcept_throw.h \
   /usr/include/c++/16.1.1/bits/stdexcept_throwfwd.h \
+  /usr/include/c++/16.1.1/bits/stl_algo.h \
   /usr/include/c++/16.1.1/bits/stl_algobase.h \
   /usr/include/c++/16.1.1/bits/stl_bvector.h \
   /usr/include/c++/16.1.1/bits/stl_construct.h \
   /usr/include/c++/16.1.1/bits/stl_function.h \
+  /usr/include/c++/16.1.1/bits/stl_heap.h \
   /usr/include/c++/16.1.1/bits/stl_iterator.h \
   /usr/include/c++/16.1.1/bits/stl_iterator_base_funcs.h \
   /usr/include/c++/16.1.1/bits/stl_iterator_base_types.h \
@@ -443,6 +460,7 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o: /home/deanwilson/development/proje
   /usr/include/c++/16.1.1/bits/streambuf_iterator.h \
   /usr/include/c++/16.1.1/bits/string_view.tcc \
   /usr/include/c++/16.1.1/bits/stringfwd.h \
+  /usr/include/c++/16.1.1/bits/uniform_int_dist.h \
   /usr/include/c++/16.1.1/bits/unique_ptr.h \
   /usr/include/c++/16.1.1/bits/unordered_map.h \
   /usr/include/c++/16.1.1/bits/uses_allocator.h \
@@ -453,6 +471,7 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o: /home/deanwilson/development/proje
   /usr/include/c++/16.1.1/cctype \
   /usr/include/c++/16.1.1/cerrno \
   /usr/include/c++/16.1.1/clocale \
+  /usr/include/c++/16.1.1/cmath \
   /usr/include/c++/16.1.1/compare \
   /usr/include/c++/16.1.1/concepts \
   /usr/include/c++/16.1.1/cstddef \
@@ -480,6 +499,7 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o: /home/deanwilson/development/proje
   /usr/include/c++/16.1.1/new \
   /usr/include/c++/16.1.1/numbers \
   /usr/include/c++/16.1.1/pstl/execution_defs.h \
+  /usr/include/c++/16.1.1/pstl/glue_algorithm_defs.h \
   /usr/include/c++/16.1.1/pstl/glue_memory_defs.h \
   /usr/include/c++/16.1.1/pstl/pstl_config.h \
   /usr/include/c++/16.1.1/stdexcept \
@@ -487,6 +507,18 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o: /home/deanwilson/development/proje
   /usr/include/c++/16.1.1/string \
   /usr/include/c++/16.1.1/string_view \
   /usr/include/c++/16.1.1/system_error \
+  /usr/include/c++/16.1.1/tr1/bessel_function.tcc \
+  /usr/include/c++/16.1.1/tr1/beta_function.tcc \
+  /usr/include/c++/16.1.1/tr1/ell_integral.tcc \
+  /usr/include/c++/16.1.1/tr1/exp_integral.tcc \
+  /usr/include/c++/16.1.1/tr1/gamma.tcc \
+  /usr/include/c++/16.1.1/tr1/hypergeometric.tcc \
+  /usr/include/c++/16.1.1/tr1/legendre_function.tcc \
+  /usr/include/c++/16.1.1/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/16.1.1/tr1/poly_hermite.tcc \
+  /usr/include/c++/16.1.1/tr1/poly_laguerre.tcc \
+  /usr/include/c++/16.1.1/tr1/riemann_zeta.tcc \
+  /usr/include/c++/16.1.1/tr1/special_function_util.h \
   /usr/include/c++/16.1.1/tuple \
   /usr/include/c++/16.1.1/type_traits \
   /usr/include/c++/16.1.1/typeinfo \
@@ -516,6 +548,7 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o: /home/deanwilson/development/proje
   /usr/include/linux/stddef.h \
   /usr/include/linux/types.h \
   /usr/include/locale.h \
+  /usr/include/math.h \
   /usr/include/pthread.h \
   /usr/include/sched.h \
   /usr/include/stdc-predef.h \
@@ -591,8 +624,6 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 
 /usr/lib/libm.so.6:
 
-/usr/lib/libgraphite2.so.3:
-
 /usr/lib/libglib-2.0.so.0:
 
 /usr/lib/libc_nonshared.a:
@@ -605,8 +636,6 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 
 /usr/lib/libgcc_s.so.1:
 
-/usr/lib/libgcc_s.so:
-
 /usr/lib/libatomic.so:
 
 /usr/lib/crtn.o:
@@ -618,10 +647,6 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 /usr/include/sys/types.h:
 
 /usr/include/sys/select.h:
-
-/usr/include/wctype.h:
-
-/usr/include/sched.h:
 
 /usr/include/pthread.h:
 
@@ -637,8 +662,6 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 
 /usr/include/c++/16.1.1/x86_64-pc-linux-gnu/bits/ctype_base.h:
 
-/usr/include/c++/16.1.1/x86_64-pc-linux-gnu/bits/cpu_defines.h:
-
 /usr/include/c++/16.1.1/x86_64-pc-linux-gnu/bits/c++config.h:
 
 /usr/include/c++/16.1.1/x86_64-pc-linux-gnu/bits/atomic_word.h:
@@ -648,6 +671,16 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 /usr/include/c++/16.1.1/unordered_map:
 
 /usr/include/c++/16.1.1/typeinfo:
+
+/usr/include/c++/16.1.1/tr1/poly_laguerre.tcc:
+
+/usr/include/c++/16.1.1/tr1/poly_hermite.tcc:
+
+/usr/include/c++/16.1.1/tr1/exp_integral.tcc:
+
+/usr/include/c++/16.1.1/tr1/ell_integral.tcc:
+
+/usr/include/c++/16.1.1/tr1/beta_function.tcc:
 
 /usr/include/c++/16.1.1/system_error:
 
@@ -664,6 +697,8 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 /usr/include/c++/16.1.1/pstl/pstl_config.h:
 
 /usr/include/c++/16.1.1/pstl/glue_memory_defs.h:
+
+/usr/include/c++/16.1.1/tr1/hypergeometric.tcc:
 
 /usr/include/c++/16.1.1/pstl/execution_defs.h:
 
@@ -689,11 +724,7 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 
 /usr/include/c++/16.1.1/debug/debug.h:
 
-/usr/include/c++/16.1.1/debug/assertions.h:
-
 /usr/include/c++/16.1.1/cwctype:
-
-/usr/include/c++/16.1.1/cwchar:
 
 /usr/include/c++/16.1.1/cstdlib:
 
@@ -715,7 +746,39 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 
 /usr/include/c++/16.1.1/bits/utility.h:
 
+/usr/include/linux/errno.h:
+
+/usr/include/c++/16.1.1/bits/uses_allocator.h:
+
+/usr/lib/libharfbuzz.so.0:
+
+/usr/include/c++/16.1.1/bits/unordered_map.h:
+
+/usr/include/c++/16.1.1/bits/unique_ptr.h:
+
+/usr/include/c++/16.1.1/limits:
+
+/usr/include/c++/16.1.1/bits/streambuf_iterator.h:
+
+/usr/include/c++/16.1.1/bits/stl_vector.h:
+
+/usr/include/c++/16.1.1/bits/stl_tempbuf.h:
+
+/usr/include/c++/16.1.1/bits/stl_raw_storage_iter.h:
+
+/usr/lib/libc.so.6:
+
+/usr/include/c++/16.1.1/cstdio:
+
+/usr/include/c++/16.1.1/bits/stl_iterator_base_types.h:
+
+/usr/include/c++/16.1.1/bits/stl_heap.h:
+
+/usr/include/c++/16.1.1/tr1/modified_bessel_func.tcc:
+
 /usr/include/asm-generic/posix_types.h:
+
+/usr/include/c++/16.1.1/bits/uniform_int_dist.h:
 
 /usr/include/stdc-predef.h:
 
@@ -731,9 +794,15 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 
 /usr/include/SDL3/SDL_process.h:
 
+/usr/include/c++/16.1.1/tr1/legendre_function.tcc:
+
 /usr/include/alloca.h:
 
-/usr/include/SDL3/SDL_version.h:
+/usr/lib/libz.so.1:
+
+/usr/include/c++/16.1.1/bits/stl_iterator_base_funcs.h:
+
+/usr/include/bits/uintn-identity.h:
 
 /usr/include/SDL3/SDL_sensor.h:
 
@@ -755,6 +824,8 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 
 /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Render/Renderer.h:
 
+/usr/include/bits/mathcalls-narrow.h:
+
 /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Render/IFontBackend.h:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h:
@@ -762,6 +833,8 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 /usr/lib32/libbrotlicommon.so.1:
 
 /usr/include/asm-generic/int-ll64.h:
+
+/usr/include/bits/mathcalls-macros.h:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h:
 
@@ -773,9 +846,15 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 
 /usr/include/sys/cdefs.h:
 
+/usr/include/c++/16.1.1/debug/assertions.h:
+
+/usr/include/c++/16.1.1/bits/specfun.h:
+
 /usr/include/bits/endianness.h:
 
 /usr/include/stdio.h:
+
+/usr/include/c++/16.1.1/cmath:
 
 /usr/include/bits/wordsize.h:
 
@@ -796,6 +875,10 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 /usr/include/string.h:
 
 /usr/include/SDL3/SDL_mutex.h:
+
+/usr/include/c++/16.1.1/bits/stringfwd.h:
+
+/usr/include/bits/mathcalls-helper-functions.h:
 
 /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Widgets/Button.h:
 
@@ -857,6 +940,8 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 
 /usr/include/SDL3/SDL_dlopennote.h:
 
+/usr/include/c++/16.1.1/tr1/gamma.tcc:
+
 /usr/include/SDL3_ttf/SDL_ttf.h:
 
 /usr/include/SDL3/SDL_close_code.h:
@@ -866,6 +951,10 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 /usr/lib/libmvec.so.1:
 
 /usr/include/c++/16.1.1/bits/allocated_ptr.h:
+
+/usr/include/c++/16.1.1/bits/stl_iterator.h:
+
+/usr/include/SDL3/SDL_clipboard.h:
 
 /usr/lib/libbrotlicommon.so.1:
 
@@ -899,6 +988,10 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 
 /usr/include/SDL3/SDL_events.h:
 
+/usr/include/c++/16.1.1/x86_64-pc-linux-gnu/bits/cpu_defines.h:
+
+/usr/include/bits/iscanonical.h:
+
 /usr/include/bits/endian.h:
 
 /usr/include/sys/single_threaded.h:
@@ -908,6 +1001,10 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 /usr/include/SDL3/SDL_error.h:
 
 /usr/include/bits/stdint-least.h:
+
+/usr/include/c++/16.1.1/bits/string_view.tcc:
+
+/usr/include/SDL3/SDL_mouse.h:
 
 /usr/include/SDL3/SDL_atomic.h:
 
@@ -963,13 +1060,7 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 
 /usr/include/SDL3/SDL_dialog.h:
 
-/usr/include/c++/16.1.1/bits/stl_tempbuf.h:
-
 /usr/include/SDL3/SDL_assert.h:
-
-/usr/include/c++/16.1.1/limits:
-
-/usr/include/c++/16.1.1/bits/streambuf_iterator.h:
 
 /usr/include/c++/16.1.1/x86_64-pc-linux-gnu/bits/c++allocator.h:
 
@@ -997,6 +1088,10 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 
 /usr/include/SDL3/SDL_messagebox.h:
 
+/usr/include/c++/16.1.1/bits/stl_uninitialized.h:
+
+/usr/include/SDL3/SDL_stdinc.h:
+
 /usr/include/bits/stdint-intn.h:
 
 /usr/include/bits/types/clockid_t.h:
@@ -1007,17 +1102,15 @@ CMakeFiles/penumbra_demo.dir/demo/DemoTheme.cpp.o:
 
 /usr/include/features-time64.h:
 
+/usr/include/c++/16.1.1/tr1/riemann_zeta.tcc:
+
+/usr/include/c++/16.1.1/tr1/bessel_function.tcc:
+
 /usr/include/SDL3/SDL_metal.h:
 
 /usr/include/bits/types/timer_t.h:
 
 /usr/include/c++/16.1.1/bits/std_abs.h:
-
-/usr/lib/libc.so.6:
-
-/usr/include/c++/16.1.1/cstdio:
-
-/usr/include/c++/16.1.1/bits/stl_iterator_base_types.h:
 
 /home/deanwilson/development/projects/penumbra-proto/demo/DemoTheme.cpp:
 
@@ -1031,15 +1124,23 @@ CMakeFiles/penumbra_demo.dir/demo/DemoTheme.cpp.o:
 
 /usr/include/errno.h:
 
+/usr/include/c++/16.1.1/pstl/glue_algorithm_defs.h:
+
 /usr/include/SDL3/SDL_storage.h:
 
 /usr/include/SDL3/SDL_platform.h:
 
-/usr/include/asm/bitsperlong.h:
-
 /usr/include/bits/time.h:
 
 /usr/include/asm/posix_types.h:
+
+/usr/include/c++/16.1.1/bits/stl_pair.h:
+
+/usr/include/c++/16.1.1/bits/stl_algo.h:
+
+/usr/include/c++/16.1.1/bits/streambuf.tcc:
+
+/usr/include/SDL3/SDL_misc.h:
 
 /usr/include/bits/types/__locale_t.h:
 
@@ -1053,13 +1154,19 @@ CMakeFiles/penumbra_demo.dir/demo/DemoTheme.cpp.o:
 
 /usr/include/c++/16.1.1/bits/atomic_lockfree_defines.h:
 
-/usr/lib/libharfbuzz.so.0:
-
-/usr/include/c++/16.1.1/bits/unordered_map.h:
-
 /usr/include/SDL3/SDL_platform_defines.h:
 
 /usr/include/c++/16.1.1/bits/node_handle.h:
+
+/usr/include/bits/flt-eval-method.h:
+
+/home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Anim/Animation.h:
+
+/usr/include/c++/16.1.1/iosfwd:
+
+/usr/include/c++/16.1.1/bits/functexcept.h:
+
+/usr/include/bits/timex.h:
 
 /usr/include/SDL3/SDL_power.h:
 
@@ -1069,7 +1176,11 @@ CMakeFiles/penumbra_demo.dir/demo/DemoTheme.cpp.o:
 
 /usr/include/SDL3/SDL_thread.h:
 
+/usr/include/bits/fp-logb.h:
+
 /usr/include/c++/16.1.1/bits/enable_special_members.h:
+
+/usr/include/asm/bitsperlong.h:
 
 /usr/include/bits/stdint-uintn.h:
 
@@ -1081,21 +1192,47 @@ CMakeFiles/penumbra_demo.dir/demo/DemoTheme.cpp.o:
 
 /usr/include/bits/cpu-set.h:
 
-/usr/include/c++/16.1.1/iosfwd:
+/usr/include/wctype.h:
 
-/usr/include/c++/16.1.1/bits/functexcept.h:
+/usr/include/sched.h:
 
-/usr/include/bits/timex.h:
+/usr/include/bits/fp-fast.h:
 
-/usr/include/linux/errno.h:
+/usr/lib/libgraphite2.so.3:
 
-/usr/include/c++/16.1.1/bits/uses_allocator.h:
+/usr/include/bits/libm-simd-decl-stubs.h:
+
+/usr/include/c++/16.1.1/bits/ranges_algo.h:
+
+/usr/include/c++/16.1.1/bits/stl_construct.h:
 
 /usr/include/c++/16.1.1/bits/stl_function.h:
 
 /usr/include/SDL3/SDL.h:
 
 /usr/include/bits/locale.h:
+
+/usr/include/bits/math-vector.h:
+
+/usr/lib/libm.so:
+
+/usr/include/c++/16.1.1/bits/locale_classes.tcc:
+
+/usr/include/c++/16.1.1/cwchar:
+
+/usr/include/bits/mathcalls.h:
+
+/usr/include/bits/types/__fpos_t.h:
+
+/usr/include/SDL3/SDL_begin_code.h:
+
+/usr/include/SDL3/SDL_iostream.h:
+
+/usr/include/bits/types/clock_t.h:
+
+/usr/include/bits/types/struct_tm.h:
+
+/usr/include/c++/16.1.1/bits/locale_classes.h:
 
 /usr/lib/libc.so:
 
@@ -1118,18 +1255,6 @@ CMakeFiles/penumbra_demo.dir/demo/DemoTheme.cpp.o:
 /home/deanwilson/development/projects/penumbra-proto/demo/DemoResolvers.h:
 
 /usr/include/bits/types/__fpos64_t.h:
-
-/usr/include/bits/types/__fpos_t.h:
-
-/usr/include/SDL3/SDL_begin_code.h:
-
-/usr/include/SDL3/SDL_iostream.h:
-
-/usr/include/bits/types/clock_t.h:
-
-/usr/include/bits/types/struct_tm.h:
-
-/usr/include/c++/16.1.1/bits/locale_classes.h:
 
 /usr/include/bits/types/error_t.h:
 
@@ -1165,6 +1290,10 @@ CMakeFiles/penumbra_demo.dir/demo/DemoTheme.cpp.o:
 
 /usr/include/bits/wctype-wchar.h:
 
+/usr/lib/libgcc_s.so:
+
+/usr/include/c++/16.1.1/algorithm:
+
 /usr/include/bits/select.h:
 
 /usr/include/c++/16.1.1/array:
@@ -1178,6 +1307,10 @@ CMakeFiles/penumbra_demo.dir/demo/DemoTheme.cpp.o:
 /usr/include/c++/16.1.1/bits/refwrap.h:
 
 /usr/include/c++/16.1.1/bits/shared_ptr_base.h:
+
+/usr/include/SDL3/SDL_version.h:
+
+/usr/include/c++/16.1.1/bits/algorithmfwd.h:
 
 /usr/include/c++/16.1.1/bits/new_except.h:
 
@@ -1206,6 +1339,8 @@ CMakeFiles/penumbra_demo.dir/demo/DemoTheme.cpp.o:
 /usr/include/c++/16.1.1/cerrno:
 
 /usr/include/c++/16.1.1/bits/ptr_traits.h:
+
+/usr/include/c++/16.1.1/tr1/special_function_util.h:
 
 /usr/include/c++/16.1.1/bits/binders.h:
 
@@ -1247,10 +1382,6 @@ libpenumbra.a:
 
 /usr/include/c++/16.1.1/bits/iterator_concepts.h:
 
-/usr/lib/libm.so:
-
-/usr/include/c++/16.1.1/bits/locale_classes.tcc:
-
 /usr/include/c++/16.1.1/bits/locale_facets.h:
 
 /usr/include/c++/16.1.1/bits/locale_facets.tcc:
@@ -1289,38 +1420,6 @@ libpenumbra.a:
 
 /usr/include/c++/16.1.1/bits/stdexcept_throwfwd.h:
 
-/usr/include/SDL3/SDL_mouse.h:
-
-/usr/include/c++/16.1.1/bits/string_view.tcc:
+/usr/include/math.h:
 
 /usr/include/c++/16.1.1/bits/stl_algobase.h:
-
-/usr/include/c++/16.1.1/bits/stl_construct.h:
-
-/usr/include/SDL3/SDL_clipboard.h:
-
-/usr/include/c++/16.1.1/bits/stl_iterator.h:
-
-/usr/lib/libz.so.1:
-
-/usr/include/bits/uintn-identity.h:
-
-/usr/include/c++/16.1.1/bits/stl_iterator_base_funcs.h:
-
-/usr/include/c++/16.1.1/bits/stl_pair.h:
-
-/usr/include/c++/16.1.1/bits/stl_raw_storage_iter.h:
-
-/usr/include/SDL3/SDL_stdinc.h:
-
-/usr/include/c++/16.1.1/bits/stl_uninitialized.h:
-
-/usr/include/c++/16.1.1/bits/stl_vector.h:
-
-/usr/include/SDL3/SDL_misc.h:
-
-/usr/include/c++/16.1.1/bits/streambuf.tcc:
-
-/usr/include/c++/16.1.1/bits/stringfwd.h:
-
-/usr/include/c++/16.1.1/bits/unique_ptr.h:

@@ -20,6 +20,10 @@ struct InputState {
     std::string              TextInputThisFrame;       // from SDL text-input events
     std::vector<SDL_Keycode> KeysPressedThisFrame;     // arrows, backspace, delete, etc.
     SDL_Keymod               ModifierState{SDL_KMOD_NONE};
+
+    // Frame timing carried alongside input, so per-frame widget updates (e.g.
+    // animations) can advance without changing the WidgetBase interface.
+    float DeltaTimeSeconds{0.0f};
 };
 
 } // namespace Penumbra::Platform

@@ -27,6 +27,7 @@ private:
     SDL_Window*   Window{nullptr};
     SDL_Renderer* SdlRenderer{nullptr};
     float         DpiScaleFactor{1.0f};
+    Uint64        LastFrameTimeNs{0}; // for the per-frame delta time
 
     // Previous-frame button state, used to derive pressed / released edges.
     bool PreviousMouseButtonDown[3]{};
