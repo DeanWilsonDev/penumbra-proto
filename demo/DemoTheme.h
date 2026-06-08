@@ -21,7 +21,7 @@ struct Theme {
     SDL_Color ColorBorderDefault     = {70, 70, 75, 255};
     SDL_Color ColorControlDisabled   = {45, 45, 50, 255};
 
-    float BorderRadiusSmall  = 3.0f;
+    float BorderRadiusSmall  = 20.0f;
     float BorderWidthDefault = 1.0f;
 
     float FontSizeBody = 16.0f;

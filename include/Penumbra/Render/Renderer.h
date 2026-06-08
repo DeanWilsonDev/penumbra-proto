@@ -20,8 +20,11 @@ public:
     void EndFrameAndPresent();
 
     // All coordinates are LOGICAL pixels; the renderer multiplies by DPI scale internally.
-    void DrawFilledRect (SDL_FRect RectLogical, SDL_Color Color);
-    void DrawRectOutline(SDL_FRect RectLogical, SDL_Color Color, float ThicknessLogical);
+    // CornerRadiusLogical 0 (the default) draws square corners via the fast path;
+    // a positive radius tessellates a rounded rect through SDL_RenderGeometry.
+    void DrawFilledRect (SDL_FRect RectLogical, SDL_Color Color, float CornerRadiusLogical = 0.0f);
+    void DrawRectOutline(SDL_FRect RectLogical, SDL_Color Color, float ThicknessLogical,
+                         float CornerRadiusLogical = 0.0f);
     void DrawText       (FontHandle Font, std::string_view Text, SDL_FPoint PositionLogical, SDL_Color Color);
 
     // Clip stack — every push must be matched by a pop. Nested pushes intersect.

@@ -124,10 +124,10 @@ bool ScrollablePanel::UpdateInteractionState(const Platform::InputState& Input) 
 
 void ScrollablePanel::Draw(Render::Renderer& Renderer) {
     if (Style.ColorBackground.a != 0) {
-        Renderer.DrawFilledRect(ArrangedRect, Style.ColorBackground);
+        Renderer.DrawFilledRect(ArrangedRect, Style.ColorBackground, Style.BorderRadius);
     }
     if (Style.BorderWidth > 0.0f && Style.ColorBorder.a != 0) {
-        Renderer.DrawRectOutline(ArrangedRect, Style.ColorBorder, Style.BorderWidth);
+        Renderer.DrawRectOutline(ArrangedRect, Style.ColorBorder, Style.BorderWidth, Style.BorderRadius);
     }
 
     const SDL_FRect Content = ContentRectFrom(ArrangedRect);

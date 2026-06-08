@@ -344,8 +344,10 @@ CMakeFiles/penumbra.dir/src/Penumbra/Render/Renderer.cpp.o: /home/deanwilson/dev
   /usr/include/bits/waitstatus.h \
   /usr/include/bits/wchar.h \
   /usr/include/bits/wordsize.h \
+  /usr/include/c++/16.1.1/algorithm \
   /usr/include/c++/16.1.1/backward/binders.h \
   /usr/include/c++/16.1.1/bit \
+  /usr/include/c++/16.1.1/bits/algorithmfwd.h \
   /usr/include/c++/16.1.1/bits/alloc_traits.h \
   /usr/include/c++/16.1.1/bits/allocator.h \
   /usr/include/c++/16.1.1/bits/char_traits.h \
@@ -371,6 +373,8 @@ CMakeFiles/penumbra.dir/src/Penumbra/Render/Renderer.cpp.o: /home/deanwilson/dev
   /usr/include/c++/16.1.1/bits/predefined_ops.h \
   /usr/include/c++/16.1.1/bits/ptr_traits.h \
   /usr/include/c++/16.1.1/bits/range_access.h \
+  /usr/include/c++/16.1.1/bits/ranges_algo.h \
+  /usr/include/c++/16.1.1/bits/ranges_algobase.h \
   /usr/include/c++/16.1.1/bits/ranges_base.h \
   /usr/include/c++/16.1.1/bits/ranges_cmp.h \
   /usr/include/c++/16.1.1/bits/ranges_util.h \
@@ -379,18 +383,22 @@ CMakeFiles/penumbra.dir/src/Penumbra/Render/Renderer.cpp.o: /home/deanwilson/dev
   /usr/include/c++/16.1.1/bits/std_abs.h \
   /usr/include/c++/16.1.1/bits/stdexcept_throw.h \
   /usr/include/c++/16.1.1/bits/stdexcept_throwfwd.h \
+  /usr/include/c++/16.1.1/bits/stl_algo.h \
   /usr/include/c++/16.1.1/bits/stl_algobase.h \
   /usr/include/c++/16.1.1/bits/stl_bvector.h \
   /usr/include/c++/16.1.1/bits/stl_construct.h \
   /usr/include/c++/16.1.1/bits/stl_function.h \
+  /usr/include/c++/16.1.1/bits/stl_heap.h \
   /usr/include/c++/16.1.1/bits/stl_iterator.h \
   /usr/include/c++/16.1.1/bits/stl_iterator_base_funcs.h \
   /usr/include/c++/16.1.1/bits/stl_iterator_base_types.h \
   /usr/include/c++/16.1.1/bits/stl_pair.h \
+  /usr/include/c++/16.1.1/bits/stl_tempbuf.h \
   /usr/include/c++/16.1.1/bits/stl_uninitialized.h \
   /usr/include/c++/16.1.1/bits/stl_vector.h \
   /usr/include/c++/16.1.1/bits/string_view.tcc \
   /usr/include/c++/16.1.1/bits/stringfwd.h \
+  /usr/include/c++/16.1.1/bits/uniform_int_dist.h \
   /usr/include/c++/16.1.1/bits/uses_allocator.h \
   /usr/include/c++/16.1.1/bits/uses_allocator_args.h \
   /usr/include/c++/16.1.1/bits/utility.h \
@@ -402,6 +410,7 @@ CMakeFiles/penumbra.dir/src/Penumbra/Render/Renderer.cpp.o: /home/deanwilson/dev
   /usr/include/c++/16.1.1/concepts \
   /usr/include/c++/16.1.1/cstddef \
   /usr/include/c++/16.1.1/cstdint \
+  /usr/include/c++/16.1.1/cstdlib \
   /usr/include/c++/16.1.1/cwchar \
   /usr/include/c++/16.1.1/debug/assertions.h \
   /usr/include/c++/16.1.1/debug/debug.h \
@@ -413,6 +422,8 @@ CMakeFiles/penumbra.dir/src/Penumbra/Render/Renderer.cpp.o: /home/deanwilson/dev
   /usr/include/c++/16.1.1/limits \
   /usr/include/c++/16.1.1/new \
   /usr/include/c++/16.1.1/numbers \
+  /usr/include/c++/16.1.1/pstl/execution_defs.h \
+  /usr/include/c++/16.1.1/pstl/glue_algorithm_defs.h \
   /usr/include/c++/16.1.1/pstl/pstl_config.h \
   /usr/include/c++/16.1.1/string_view \
   /usr/include/c++/16.1.1/tr1/bessel_function.tcc \
@@ -2978,8 +2989,6 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 
 /usr/include/c++/16.1.1/bits/stl_raw_storage_iter.h:
 
-/usr/include/c++/16.1.1/bits/stl_heap.h:
-
 /usr/include/c++/16.1.1/bits/shared_ptr_atomic.h:
 
 /usr/include/c++/16.1.1/bits/shared_ptr_base.h:
@@ -2987,8 +2996,6 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 /usr/include/c++/16.1.1/bits/refwrap.h:
 
 /usr/include/c++/16.1.1/bits/ranges_uninitialized.h:
-
-/usr/include/c++/16.1.1/bits/ranges_algobase.h:
 
 /usr/include/c++/16.1.1/bits/ostream.h:
 
@@ -3009,8 +3016,6 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 /usr/include/c++/16.1.1/bits/allocated_ptr.h:
 
 /usr/include/c++/16.1.1/bits/align.h:
-
-/usr/include/c++/16.1.1/algorithm:
 
 /usr/include/bits/wctype-wchar.h:
 
@@ -3042,10 +3047,6 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 
 /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Widgets/WidgetBase.h:
 
-/usr/include/c++/16.1.1/bits/stl_tempbuf.h:
-
-/home/deanwilson/development/projects/penumbra-proto/src/Penumbra/Widgets/Box.cpp:
-
 /usr/include/c++/16.1.1/unordered_map:
 
 /usr/include/c++/16.1.1/ext/aligned_buffer.h:
@@ -3058,6 +3059,22 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 
 /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Render/SdlTtfFontBackend.h:
 
+/home/deanwilson/development/projects/penumbra-proto/src/Penumbra/Render/SdlTtfFontBackend.cpp:
+
+/usr/include/c++/16.1.1/bits/binders.h:
+
+/usr/include/c++/16.1.1/tr1/special_function_util.h:
+
+/usr/include/c++/16.1.1/typeinfo:
+
+/usr/include/c++/16.1.1/tr1/poly_laguerre.tcc:
+
+/usr/include/c++/16.1.1/tr1/poly_hermite.tcc:
+
+/usr/include/asm-generic/posix_types.h:
+
+/usr/include/c++/16.1.1/tr1/modified_bessel_func.tcc:
+
 /usr/include/c++/16.1.1/bits/concept_check.h:
 
 /usr/include/c++/16.1.1/bits/basic_string.h:
@@ -3067,10 +3084,6 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 /usr/include/c++/16.1.1/pstl/pstl_config.h:
 
 /usr/include/c++/16.1.1/bits/stl_bvector.h:
-
-/usr/include/c++/16.1.1/pstl/execution_defs.h:
-
-/usr/include/c++/16.1.1/tr1/hypergeometric.tcc:
 
 /usr/include/bits/types/timer_t.h:
 
@@ -3099,6 +3112,10 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 /usr/include/bits/types/__fpos64_t.h:
 
 /home/deanwilson/development/projects/penumbra-proto/src/Penumbra/Render/Renderer.cpp:
+
+/usr/include/c++/16.1.1/tr1/hypergeometric.tcc:
+
+/usr/include/c++/16.1.1/pstl/execution_defs.h:
 
 /usr/include/linux/posix_types.h:
 
@@ -3180,6 +3197,12 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 
 /usr/include/bits/atomic_wide_counter.h:
 
+/usr/include/SDL3_ttf/SDL_ttf.h:
+
+/usr/include/c++/16.1.1/tr1/gamma.tcc:
+
+/usr/include/SDL3/SDL_close_code.h:
+
 /usr/include/asm-generic/errno.h:
 
 /usr/include/c++/16.1.1/bits/enable_special_members.h:
@@ -3195,10 +3218,6 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 /usr/include/c++/16.1.1/tr1/legendre_function.tcc:
 
 /usr/include/alloca.h:
-
-/usr/include/c++/16.1.1/bits/algorithmfwd.h:
-
-/usr/include/SDL3/SDL_version.h:
 
 /usr/include/SDL3/SDL_video.h:
 
@@ -3314,6 +3333,10 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 
 /usr/include/SDL3/SDL_dialog.h:
 
+/home/deanwilson/development/projects/penumbra-proto/src/Penumbra/Widgets/Box.cpp:
+
+/usr/include/c++/16.1.1/bits/stl_tempbuf.h:
+
 /usr/include/SDL3/SDL_keyboard.h:
 
 /usr/include/bits/stdint-least.h:
@@ -3339,12 +3362,6 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 /usr/include/SDL3/SDL_process.h:
 
 /usr/include/bits/byteswap.h:
-
-/usr/include/c++/16.1.1/pstl/glue_algorithm_defs.h:
-
-/usr/include/errno.h:
-
-/usr/include/SDL3/SDL_storage.h:
 
 /usr/include/SDL3/SDL_platform.h:
 
@@ -3390,6 +3407,12 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 
 /usr/include/SDL3/SDL_render.h:
 
+/usr/include/c++/16.1.1/tr1/riemann_zeta.tcc:
+
+/usr/include/SDL3/SDL_metal.h:
+
+/usr/include/c++/16.1.1/tr1/bessel_function.tcc:
+
 /usr/include/bits/types/struct_itimerspec.h:
 
 /usr/include/SDL3/SDL_scancode.h:
@@ -3408,15 +3431,9 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 
 /usr/include/SDL3/SDL_time.h:
 
-/usr/include/c++/16.1.1/tr1/poly_hermite.tcc:
-
 /usr/include/c++/16.1.1/backward/auto_ptr.h:
 
 /usr/include/c++/16.1.1/bits/erase_if.h:
-
-/usr/include/c++/16.1.1/bits/binders.h:
-
-/usr/include/c++/16.1.1/tr1/special_function_util.h:
 
 /usr/include/c++/16.1.1/bits/exception.h:
 
@@ -3440,12 +3457,6 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 
 /usr/include/c++/16.1.1/bits/ostream_insert.h:
 
-/usr/include/SDL3/SDL_metal.h:
-
-/usr/include/c++/16.1.1/tr1/bessel_function.tcc:
-
-/usr/include/c++/16.1.1/tr1/riemann_zeta.tcc:
-
 /usr/include/c++/16.1.1/bits/memoryfwd.h:
 
 /usr/include/c++/16.1.1/bits/postypes.h:
@@ -3459,6 +3470,10 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 /usr/include/SDL3/SDL_mouse.h:
 
 /usr/include/c++/16.1.1/bits/string_view.tcc:
+
+/usr/include/math.h:
+
+/usr/include/c++/16.1.1/bits/stl_algobase.h:
 
 /usr/include/sys/select.h:
 
@@ -3475,6 +3490,8 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 /usr/include/SDL3/SDL.h:
 
 /usr/include/c++/16.1.1/bits/stl_function.h:
+
+/usr/include/c++/16.1.1/bits/stl_heap.h:
 
 /usr/include/SDL3/SDL_clipboard.h:
 
@@ -3528,10 +3545,6 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 
 /usr/include/c++/16.1.1/debug/debug.h:
 
-/usr/include/asm-generic/posix_types.h:
-
-/usr/include/c++/16.1.1/tr1/modified_bessel_func.tcc:
-
 /usr/include/c++/16.1.1/ext/alloc_traits.h:
 
 /usr/include/c++/16.1.1/bits/uses_allocator.h:
@@ -3581,6 +3594,10 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 /usr/include/bits/wchar.h:
 
 /usr/include/c++/16.1.1/x86_64-pc-linux-gnu/bits/c++locale.h:
+
+/usr/include/SDL3/SDL_version.h:
+
+/usr/include/c++/16.1.1/bits/algorithmfwd.h:
 
 /usr/include/features-time64.h:
 
@@ -3642,6 +3659,10 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 
 /usr/include/bits/mathcalls-macros.h:
 
+/usr/include/c++/16.1.1/algorithm:
+
+/usr/include/c++/16.1.1/bits/ranges_algobase.h:
+
 /usr/include/asm-generic/errno-base.h:
 
 /usr/include/c++/16.1.1/bits/uses_allocator_args.h:
@@ -3654,20 +3675,10 @@ CMakeFiles/penumbra.dir/src/Penumbra/Widgets/TextInput.cpp.o: /home/deanwilson/d
 
 /usr/include/c++/16.1.1/cmath:
 
+/usr/include/errno.h:
+
+/usr/include/SDL3/SDL_storage.h:
+
+/usr/include/c++/16.1.1/pstl/glue_algorithm_defs.h:
+
 /usr/include/c++/16.1.1/tr1/exp_integral.tcc:
-
-/usr/include/SDL3_ttf/SDL_ttf.h:
-
-/usr/include/SDL3/SDL_close_code.h:
-
-/usr/include/c++/16.1.1/tr1/gamma.tcc:
-
-/usr/include/c++/16.1.1/typeinfo:
-
-/usr/include/c++/16.1.1/tr1/poly_laguerre.tcc:
-
-/usr/include/c++/16.1.1/bits/stl_algobase.h:
-
-/usr/include/math.h:
-
-/home/deanwilson/development/projects/penumbra-proto/src/Penumbra/Render/SdlTtfFontBackend.cpp:
