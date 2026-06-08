@@ -262,6 +262,30 @@ src/Penumbra/Render/SdlTtfFontBackend.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/penumbra.dir/build.make CMakeFiles/penumbra.dir/src/Penumbra/Render/SdlTtfFontBackend.cpp.s
 .PHONY : src/Penumbra/Render/SdlTtfFontBackend.cpp.s
 
+src/Penumbra/Widgets/Box.o: src/Penumbra/Widgets/Box.cpp.o
+.PHONY : src/Penumbra/Widgets/Box.o
+
+# target to build an object file
+src/Penumbra/Widgets/Box.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/penumbra.dir/build.make CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Box.cpp.o
+.PHONY : src/Penumbra/Widgets/Box.cpp.o
+
+src/Penumbra/Widgets/Box.i: src/Penumbra/Widgets/Box.cpp.i
+.PHONY : src/Penumbra/Widgets/Box.i
+
+# target to preprocess a source file
+src/Penumbra/Widgets/Box.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/penumbra.dir/build.make CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Box.cpp.i
+.PHONY : src/Penumbra/Widgets/Box.cpp.i
+
+src/Penumbra/Widgets/Box.s: src/Penumbra/Widgets/Box.cpp.s
+.PHONY : src/Penumbra/Widgets/Box.s
+
+# target to generate assembly for a file
+src/Penumbra/Widgets/Box.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/penumbra.dir/build.make CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Box.cpp.s
+.PHONY : src/Penumbra/Widgets/Box.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -287,6 +311,9 @@ help:
 	@echo "... src/Penumbra/Render/SdlTtfFontBackend.o"
 	@echo "... src/Penumbra/Render/SdlTtfFontBackend.i"
 	@echo "... src/Penumbra/Render/SdlTtfFontBackend.s"
+	@echo "... src/Penumbra/Widgets/Box.o"
+	@echo "... src/Penumbra/Widgets/Box.i"
+	@echo "... src/Penumbra/Widgets/Box.s"
 .PHONY : help
 
 
