@@ -6,6 +6,7 @@
 #include "Penumbra/Render/SdlTtfFontBackend.h"
 #include "Penumbra/Widgets/Box.h"
 #include "Penumbra/Widgets/Button.h"
+#include "Penumbra/Widgets/ScrollablePanel.h"
 
 #include <cstdio>
 #include <memory>
@@ -18,6 +19,8 @@ constexpr int WindowLogicalWidth  = 960;
 constexpr int WindowLogicalHeight = 640;
 
 constexpr const char* FontFileName = "JetBrainsMonoNerdFontMono-Regular.ttf";
+
+constexpr int RowCount = 20; // taller than the viewport, so the panel must scroll
 
 using namespace Penumbra::Widgets;
 
@@ -33,7 +36,7 @@ int main() {
     }
 
     std::printf("DPI scale factor: %.3f\n", Window.GetDpiScaleFactor());
-    std::printf("Hover and click the top button; the bottom button is disabled.\n");
+    std::printf("Scroll the wheel over the panel; resize the window to re-run layout.\n");
     std::fflush(stdout);
 
     {
@@ -49,38 +52,43 @@ int main() {
             return 1;
         }
 
-        // A panel stacking an interactive button above a disabled one.
-        auto Root = std::make_unique<Box>();
-        Root->Style    = Demo::ResolvePanelStyle(Theme);
-        Root->Layout   = LayoutMode::VerticalStack;
-        Root->ChildGap = Theme.SpacingMedium;
+        // A scrollable panel holding a tall column of full-width buttons. Alternating
+        // backgrounds make the scroll motion and the clipped edges obvious.
+        auto Root = std::make_unique<ScrollablePanel>();
+        Root->Style           = Demo::ResolvePanelStyle(Theme);
+        Root->ChildGap        = Theme.SpacingMedium;
+        Root->CrossAlignment  = CrossAlign::Stretch;
+        Root->WheelStepLogical = Theme.SpacingLarge * 3.0f;
 
-        int ClickCount = 0;
+        for (int Index = 0; Index < RowCount; ++Index) {
+            auto RowStyle = Demo::ResolvePrimaryButtonStyle(Theme);
+            if (Index % 2 == 1) {
+                RowStyle.ColorBackground = Theme.ColorSurfaceRaised; // stripe
+            }
 
-        auto Primary = std::make_unique<Button>();
-        Primary->ApplyStyle(Demo::ResolvePrimaryButtonStyle(Theme));
-        Primary->OnClicked = [&ClickCount]() {
-            ++ClickCount;
-            std::printf("Primary button clicked (count = %d)\n", ClickCount);
-            std::fflush(stdout);
-        };
-
-        auto Disabled = std::make_unique<Button>();
-        Disabled->ApplyStyle(Demo::ResolvePrimaryButtonStyle(Theme));
-        Disabled->SetIsEnabled(false);
-
-        Root->AddChild(std::move(Primary));
-        Root->AddChild(std::move(Disabled));
+            auto Row = std::make_unique<Button>();
+            Row->ApplyStyle(RowStyle);
+            Row->OnClicked = [Index]() {
+                std::printf("Row %d clicked\n", Index);
+                std::fflush(stdout);
+            };
+            Root->AddChild(std::move(Row));
+        }
 
         Penumbra::Platform::InputState Input;
         bool KeepRunning = true;
         while (KeepRunning) {
             KeepRunning = Window.PumpEventsAndBuildInput(Input);
 
-            const SDL_FPoint Available = Window.GetLogicalWindowSize();
-            const SDL_FPoint Desired = Root->Measure(Available);
-            Root->Arrange({Theme.SpacingLarge, Theme.SpacingLarge, Desired.x, Desired.y});
+            // The viewport is recomputed from the live window size every frame, so a
+            // window resize naturally re-runs measure + arrange.
+            const SDL_FPoint Window2 = Window.GetLogicalWindowSize();
+            const float Margin = Theme.SpacingLarge;
+            const SDL_FRect Viewport{Margin, Margin, Window2.x - 2.0f * Margin,
+                                     Window2.y - 2.0f * Margin};
 
+            Root->Measure({Viewport.w, Viewport.h});
+            Root->Arrange(Viewport);
             Root->UpdateInteractionState(Input);
 
             Renderer.BeginFrame(Theme.ColorBackgroundPrimary);

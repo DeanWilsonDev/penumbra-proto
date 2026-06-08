@@ -9,6 +9,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Box.cpp.o.d"
   "CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Button.cpp.o"
   "CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Button.cpp.o.d"
+  "CMakeFiles/penumbra.dir/src/Penumbra/Widgets/ScrollablePanel.cpp.o"
+  "CMakeFiles/penumbra.dir/src/Penumbra/Widgets/ScrollablePanel.cpp.o.d"
   "libpenumbra.a"
   "libpenumbra.pdb"
 )

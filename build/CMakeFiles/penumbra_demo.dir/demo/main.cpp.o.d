@@ -234,4 +234,5 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o: \
  /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Widgets/Button.h \
  /usr/include/c++/16.1.1/functional \
  /usr/include/c++/16.1.1/bits/std_function.h \
- /usr/include/c++/16.1.1/array /usr/include/c++/16.1.1/bits/binders.h
+ /usr/include/c++/16.1.1/array /usr/include/c++/16.1.1/bits/binders.h \
+ /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Widgets/ScrollablePanel.h

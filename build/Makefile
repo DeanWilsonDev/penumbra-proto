@@ -334,6 +334,30 @@ src/Penumbra/Widgets/Button.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/penumbra.dir/build.make CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Button.cpp.s
 .PHONY : src/Penumbra/Widgets/Button.cpp.s
 
+src/Penumbra/Widgets/ScrollablePanel.o: src/Penumbra/Widgets/ScrollablePanel.cpp.o
+.PHONY : src/Penumbra/Widgets/ScrollablePanel.o
+
+# target to build an object file
+src/Penumbra/Widgets/ScrollablePanel.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/penumbra.dir/build.make CMakeFiles/penumbra.dir/src/Penumbra/Widgets/ScrollablePanel.cpp.o
+.PHONY : src/Penumbra/Widgets/ScrollablePanel.cpp.o
+
+src/Penumbra/Widgets/ScrollablePanel.i: src/Penumbra/Widgets/ScrollablePanel.cpp.i
+.PHONY : src/Penumbra/Widgets/ScrollablePanel.i
+
+# target to preprocess a source file
+src/Penumbra/Widgets/ScrollablePanel.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/penumbra.dir/build.make CMakeFiles/penumbra.dir/src/Penumbra/Widgets/ScrollablePanel.cpp.i
+.PHONY : src/Penumbra/Widgets/ScrollablePanel.cpp.i
+
+src/Penumbra/Widgets/ScrollablePanel.s: src/Penumbra/Widgets/ScrollablePanel.cpp.s
+.PHONY : src/Penumbra/Widgets/ScrollablePanel.s
+
+# target to generate assembly for a file
+src/Penumbra/Widgets/ScrollablePanel.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/penumbra.dir/build.make CMakeFiles/penumbra.dir/src/Penumbra/Widgets/ScrollablePanel.cpp.s
+.PHONY : src/Penumbra/Widgets/ScrollablePanel.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -368,6 +392,9 @@ help:
 	@echo "... src/Penumbra/Widgets/Button.o"
 	@echo "... src/Penumbra/Widgets/Button.i"
 	@echo "... src/Penumbra/Widgets/Button.s"
+	@echo "... src/Penumbra/Widgets/ScrollablePanel.o"
+	@echo "... src/Penumbra/Widgets/ScrollablePanel.i"
+	@echo "... src/Penumbra/Widgets/ScrollablePanel.s"
 .PHONY : help
 
 

@@ -25,7 +25,8 @@ add_library(penumbra STATIC
     src/Penumbra/Render/Renderer.cpp
     src/Penumbra/Render/SdlTtfFontBackend.cpp
     src/Penumbra/Widgets/Box.cpp
-    src/Penumbra/Widgets/Button.cpp)
+    src/Penumbra/Widgets/Button.cpp
+    src/Penumbra/Widgets/ScrollablePanel.cpp)
 
 target_include_directories(penumbra PUBLIC include)
 
