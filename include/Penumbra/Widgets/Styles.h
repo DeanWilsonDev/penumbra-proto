@@ -27,4 +27,12 @@ struct BoxStyle {
     EdgeInsets Margin{0.0f, 0.0f, 0.0f, 0.0f};  // outside the border — the PARENT's job
 };
 
+// Per-widget styles extend BoxStyle so the box-model slots stay universal and free.
+struct ButtonStyle : BoxStyle {
+    SDL_Color ColorBackgroundHovered{0, 0, 0, 0};
+    SDL_Color ColorBackgroundPressed{0, 0, 0, 0};
+    SDL_Color ColorBackgroundDisabled{0, 0, 0, 0};
+    SDL_Color ColorLabel{0, 0, 0, 0}; // applied to a Label child by the resolver, not by Button
+};
+
 } // namespace Penumbra::Widgets

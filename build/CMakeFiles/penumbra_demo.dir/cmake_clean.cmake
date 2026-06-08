@@ -1,5 +1,7 @@
 file(REMOVE_RECURSE
   "CMakeFiles/penumbra_demo.dir/link.d"
+  "CMakeFiles/penumbra_demo.dir/demo/DemoResolvers.cpp.o"
+  "CMakeFiles/penumbra_demo.dir/demo/DemoResolvers.cpp.o.d"
   "CMakeFiles/penumbra_demo.dir/demo/DemoTheme.cpp.o"
   "CMakeFiles/penumbra_demo.dir/demo/DemoTheme.cpp.o.d"
   "CMakeFiles/penumbra_demo.dir/demo/main.cpp.o"

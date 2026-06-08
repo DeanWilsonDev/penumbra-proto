@@ -24,7 +24,8 @@ add_library(penumbra STATIC
     src/Penumbra/Platform/PlatformWindow.cpp
     src/Penumbra/Render/Renderer.cpp
     src/Penumbra/Render/SdlTtfFontBackend.cpp
-    src/Penumbra/Widgets/Box.cpp)
+    src/Penumbra/Widgets/Box.cpp
+    src/Penumbra/Widgets/Button.cpp)
 
 target_include_directories(penumbra PUBLIC include)
 
@@ -37,7 +38,8 @@ target_link_libraries(penumbra PUBLIC SDL3::SDL3 SDL3_ttf::SDL3_ttf)
 # ---------------------------------------------------------------------------
 add_executable(penumbra_demo
     demo/main.cpp
-    demo/DemoTheme.cpp)
+    demo/DemoTheme.cpp
+    demo/DemoResolvers.cpp)
 
 target_link_libraries(penumbra_demo PRIVATE penumbra)
 set_target_properties(penumbra_demo PROPERTIES

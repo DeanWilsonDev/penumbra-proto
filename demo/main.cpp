@@ -1,9 +1,11 @@
+#include "DemoResolvers.h"
 #include "DemoTheme.h"
 
 #include "Penumbra/Platform/PlatformWindow.h"
 #include "Penumbra/Render/Renderer.h"
 #include "Penumbra/Render/SdlTtfFontBackend.h"
 #include "Penumbra/Widgets/Box.h"
+#include "Penumbra/Widgets/Button.h"
 
 #include <cstdio>
 #include <memory>
@@ -19,21 +21,6 @@ constexpr const char* FontFileName = "JetBrainsMonoNerdFontMono-Regular.ttf";
 
 using namespace Penumbra::Widgets;
 
-EdgeInsets UniformInset(float Amount) { return {Amount, Amount, Amount, Amount}; }
-
-// Builds a Box whose only visible size comes from its padding — a coloured slab
-// used to make stacking, gaps, and margins visible at this milestone.
-std::unique_ptr<Box> MakeSlab(const Demo::Theme& Theme, SDL_Color Fill, EdgeInsets Padding,
-                              EdgeInsets Margin) {
-    auto Slab = std::make_unique<Box>();
-    Slab->Style.ColorBackground = Fill;
-    Slab->Style.ColorBorder     = Theme.ColorBorderDefault;
-    Slab->Style.BorderWidth     = Theme.BorderWidthDefault;
-    Slab->Style.Padding         = Padding;
-    Slab->Style.Margin          = Margin;
-    return Slab;
-}
-
 } // namespace
 
 int main() {
@@ -46,6 +33,7 @@ int main() {
     }
 
     std::printf("DPI scale factor: %.3f\n", Window.GetDpiScaleFactor());
+    std::printf("Hover and click the top button; the bottom button is disabled.\n");
     std::fflush(stdout);
 
     {
@@ -61,29 +49,34 @@ int main() {
             return 1;
         }
 
-        // A parent panel that vertically stacks two child slabs with a gap.
-        // Different child sizes and margins prove margins are respected on both axes.
+        // A panel stacking an interactive button above a disabled one.
         auto Root = std::make_unique<Box>();
-        Root->Style.ColorBackground = Theme.ColorSurfaceRaised;
-        Root->Style.ColorBorder     = Theme.ColorBorderDefault;
-        Root->Style.BorderWidth     = Theme.BorderWidthDefault;
-        Root->Style.Padding         = UniformInset(Theme.SpacingLarge);
-        Root->Layout                = LayoutMode::VerticalStack;
-        Root->ChildGap              = Theme.SpacingMedium;
+        Root->Style    = Demo::ResolvePanelStyle(Theme);
+        Root->Layout   = LayoutMode::VerticalStack;
+        Root->ChildGap = Theme.SpacingMedium;
 
-        Root->AddChild(MakeSlab(Theme, Theme.ColorAccent,
-                                {64.0f, 32.0f, 64.0f, 32.0f},
-                                {Theme.SpacingMedium, 0.0f, 0.0f, Theme.SpacingSmall}));
-        Root->AddChild(MakeSlab(Theme, Theme.ColorTextPrimary,
-                                {112.0f, 32.0f, 112.0f, 32.0f},
-                                {Theme.SpacingLarge, Theme.SpacingSmall, 0.0f, 0.0f}));
+        int ClickCount = 0;
+
+        auto Primary = std::make_unique<Button>();
+        Primary->ApplyStyle(Demo::ResolvePrimaryButtonStyle(Theme));
+        Primary->OnClicked = [&ClickCount]() {
+            ++ClickCount;
+            std::printf("Primary button clicked (count = %d)\n", ClickCount);
+            std::fflush(stdout);
+        };
+
+        auto Disabled = std::make_unique<Button>();
+        Disabled->ApplyStyle(Demo::ResolvePrimaryButtonStyle(Theme));
+        Disabled->SetIsEnabled(false);
+
+        Root->AddChild(std::move(Primary));
+        Root->AddChild(std::move(Disabled));
 
         Penumbra::Platform::InputState Input;
         bool KeepRunning = true;
         while (KeepRunning) {
             KeepRunning = Window.PumpEventsAndBuildInput(Input);
 
-            // Layout runs every frame: measure bottom-up, arrange top-down.
             const SDL_FPoint Available = Window.GetLogicalWindowSize();
             const SDL_FPoint Desired = Root->Measure(Available);
             Root->Arrange({Theme.SpacingLarge, Theme.SpacingLarge, Desired.x, Desired.y});

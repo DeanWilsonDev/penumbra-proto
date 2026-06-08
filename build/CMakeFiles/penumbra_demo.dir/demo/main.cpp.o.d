@@ -1,6 +1,7 @@
 CMakeFiles/penumbra_demo.dir/demo/main.cpp.o: \
  /home/deanwilson/development/projects/penumbra-proto/demo/main.cpp \
  /usr/include/stdc-predef.h \
+ /home/deanwilson/development/projects/penumbra-proto/demo/DemoResolvers.h \
  /home/deanwilson/development/projects/penumbra-proto/demo/DemoTheme.h \
  /usr/include/SDL3/SDL.h /usr/include/SDL3/SDL_stdinc.h \
  /usr/include/SDL3/SDL_platform_defines.h \
@@ -53,6 +54,7 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o: \
  /usr/include/SDL3/SDL_time.h /usr/include/SDL3/SDL_timer.h \
  /usr/include/SDL3/SDL_tray.h /usr/include/SDL3/SDL_version.h \
  /usr/include/SDL3/SDL_oldnames.h \
+ /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Widgets/Styles.h \
  /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Platform/PlatformWindow.h \
  /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Platform/InputState.h \
  /usr/include/c++/16.1.1/string \
@@ -167,7 +169,6 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o: \
  /usr/include/c++/16.1.1/bits/node_handle.h \
  /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Widgets/Box.h \
  /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Widgets/WidgetBase.h \
- /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Widgets/Styles.h \
  /usr/include/c++/16.1.1/memory \
  /usr/include/c++/16.1.1/bits/stl_tempbuf.h \
  /usr/include/c++/16.1.1/bits/stl_raw_storage_iter.h \
@@ -229,4 +230,8 @@ CMakeFiles/penumbra_demo.dir/demo/main.cpp.o: \
  /usr/include/c++/16.1.1/bits/ranges_uninitialized.h \
  /usr/include/c++/16.1.1/bits/ranges_algobase.h \
  /usr/include/c++/16.1.1/pstl/glue_memory_defs.h \
- /usr/include/c++/16.1.1/pstl/execution_defs.h
+ /usr/include/c++/16.1.1/pstl/execution_defs.h \
+ /home/deanwilson/development/projects/penumbra-proto/include/Penumbra/Widgets/Button.h \
+ /usr/include/c++/16.1.1/functional \
+ /usr/include/c++/16.1.1/bits/std_function.h \
+ /usr/include/c++/16.1.1/array /usr/include/c++/16.1.1/bits/binders.h

@@ -142,6 +142,30 @@ penumbra_demo/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/penumbra_demo.dir/build.make CMakeFiles/penumbra_demo.dir/build
 .PHONY : penumbra_demo/fast
 
+demo/DemoResolvers.o: demo/DemoResolvers.cpp.o
+.PHONY : demo/DemoResolvers.o
+
+# target to build an object file
+demo/DemoResolvers.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/penumbra_demo.dir/build.make CMakeFiles/penumbra_demo.dir/demo/DemoResolvers.cpp.o
+.PHONY : demo/DemoResolvers.cpp.o
+
+demo/DemoResolvers.i: demo/DemoResolvers.cpp.i
+.PHONY : demo/DemoResolvers.i
+
+# target to preprocess a source file
+demo/DemoResolvers.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/penumbra_demo.dir/build.make CMakeFiles/penumbra_demo.dir/demo/DemoResolvers.cpp.i
+.PHONY : demo/DemoResolvers.cpp.i
+
+demo/DemoResolvers.s: demo/DemoResolvers.cpp.s
+.PHONY : demo/DemoResolvers.s
+
+# target to generate assembly for a file
+demo/DemoResolvers.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/penumbra_demo.dir/build.make CMakeFiles/penumbra_demo.dir/demo/DemoResolvers.cpp.s
+.PHONY : demo/DemoResolvers.cpp.s
+
 demo/DemoTheme.o: demo/DemoTheme.cpp.o
 .PHONY : demo/DemoTheme.o
 
@@ -286,6 +310,30 @@ src/Penumbra/Widgets/Box.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/penumbra.dir/build.make CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Box.cpp.s
 .PHONY : src/Penumbra/Widgets/Box.cpp.s
 
+src/Penumbra/Widgets/Button.o: src/Penumbra/Widgets/Button.cpp.o
+.PHONY : src/Penumbra/Widgets/Button.o
+
+# target to build an object file
+src/Penumbra/Widgets/Button.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/penumbra.dir/build.make CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Button.cpp.o
+.PHONY : src/Penumbra/Widgets/Button.cpp.o
+
+src/Penumbra/Widgets/Button.i: src/Penumbra/Widgets/Button.cpp.i
+.PHONY : src/Penumbra/Widgets/Button.i
+
+# target to preprocess a source file
+src/Penumbra/Widgets/Button.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/penumbra.dir/build.make CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Button.cpp.i
+.PHONY : src/Penumbra/Widgets/Button.cpp.i
+
+src/Penumbra/Widgets/Button.s: src/Penumbra/Widgets/Button.cpp.s
+.PHONY : src/Penumbra/Widgets/Button.s
+
+# target to generate assembly for a file
+src/Penumbra/Widgets/Button.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/penumbra.dir/build.make CMakeFiles/penumbra.dir/src/Penumbra/Widgets/Button.cpp.s
+.PHONY : src/Penumbra/Widgets/Button.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -296,6 +344,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... penumbra"
 	@echo "... penumbra_demo"
+	@echo "... demo/DemoResolvers.o"
+	@echo "... demo/DemoResolvers.i"
+	@echo "... demo/DemoResolvers.s"
 	@echo "... demo/DemoTheme.o"
 	@echo "... demo/DemoTheme.i"
 	@echo "... demo/DemoTheme.s"
@@ -314,6 +365,9 @@ help:
 	@echo "... src/Penumbra/Widgets/Box.o"
 	@echo "... src/Penumbra/Widgets/Box.i"
 	@echo "... src/Penumbra/Widgets/Box.s"
+	@echo "... src/Penumbra/Widgets/Button.o"
+	@echo "... src/Penumbra/Widgets/Button.i"
+	@echo "... src/Penumbra/Widgets/Button.s"
 .PHONY : help
 
 

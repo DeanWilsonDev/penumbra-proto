@@ -4,6 +4,7 @@ demo/penumbra_demo: \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o \
   CMakeFiles/penumbra_demo.dir/demo/main.cpp.o \
   CMakeFiles/penumbra_demo.dir/demo/DemoTheme.cpp.o \
+  CMakeFiles/penumbra_demo.dir/demo/DemoResolvers.cpp.o \
   libpenumbra.a \
   /usr/lib/libSDL3_ttf.so.0.2.2 \
   /usr/lib/libSDL3.so.0.4.8 \
@@ -66,6 +67,8 @@ demo/penumbra_demo: \
 CMakeFiles/penumbra_demo.dir/demo/main.cpp.o:
 
 CMakeFiles/penumbra_demo.dir/demo/DemoTheme.cpp.o:
+
+CMakeFiles/penumbra_demo.dir/demo/DemoResolvers.cpp.o:
 
 libpenumbra.a:
 
