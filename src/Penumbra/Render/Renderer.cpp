@@ -146,6 +146,77 @@ void Renderer::DrawFilledRect(Rect RectLogical, Color InColor, float CornerRadiu
                        Indices.data(), static_cast<int>(Indices.size()));
 }
 
+void Renderer::DrawGradientRect(Rect RectLogical, Color TopColor, Color BottomColor,
+                                float CornerRadiusLogical) {
+    const SDL_FRect R = ToPhysical(RectLogical);
+    float Radius = CornerRadiusLogical * DpiScaleFactor;
+
+    const SDL_FColor Top = ToFColor(TopColor);
+    const SDL_FColor Bottom = ToFColor(BottomColor);
+    auto LerpAtY = [&](float Y) {
+        const float T = (R.h > 0.0f) ? std::clamp((Y - R.y) / R.h, 0.0f, 1.0f) : 0.0f;
+        return SDL_FColor{Top.r + (Bottom.r - Top.r) * T, Top.g + (Bottom.g - Top.g) * T,
+                          Top.b + (Bottom.b - Top.b) * T, Top.a + (Bottom.a - Top.a) * T};
+    };
+
+    if (Radius <= 0.0f) {
+        // No per-vertex color in the SDL_RenderFillRect fast path DrawFilledRect uses,
+        // so a flat gradient always takes the SDL_RenderGeometry route (4 vertices, one
+        // flat quad) even at zero radius.
+        const SDL_Vertex Vertices[4] = {
+            {{R.x,         R.y},         Top,    {0.0f, 0.0f}},
+            {{R.x + R.w,   R.y},         Top,    {0.0f, 0.0f}},
+            {{R.x + R.w,   R.y + R.h},   Bottom, {0.0f, 0.0f}},
+            {{R.x,         R.y + R.h},   Bottom, {0.0f, 0.0f}},
+        };
+        const int Indices[6] = {0, 1, 2, 0, 2, 3};
+        SDL_RenderGeometry(SdlRenderer, nullptr, Vertices, 4, Indices, 6);
+        return;
+    }
+
+    Radius = std::min(Radius, std::min(R.w, R.h) * 0.5f);
+    const int Segments = SegmentsForRadius(Radius);
+    const RoundedRing Ring = BuildRoundedRing(R, Radius, Segments);
+    const int Count = static_cast<int>(Ring.Points.size());
+    const float Half = AaFeatherPhysical * 0.5f;
+
+    // Same solid-centre-fan-plus-fading-ring structure as DrawFilledRect, except each
+    // vertex's color is looked up by its own Y position instead of being one flat Solid.
+    std::vector<SDL_Vertex> Vertices;
+    Vertices.reserve(static_cast<std::size_t>(1 + 2 * Count));
+    const SDL_FPoint Centre{R.x + R.w * 0.5f, R.y + R.h * 0.5f};
+    Vertices.push_back({Centre, LerpAtY(Centre.y), {0.0f, 0.0f}});
+    for (int Index = 0; Index < Count; ++Index) { // inner: solid, colored by position
+        const SDL_FPoint P = Ring.Points[Index];
+        const SDL_FPoint Nrm = Ring.Normals[Index];
+        const SDL_FPoint Inner{P.x - Nrm.x * Half, P.y - Nrm.y * Half};
+        Vertices.push_back({Inner, LerpAtY(Inner.y), {0.0f, 0.0f}});
+    }
+    for (int Index = 0; Index < Count; ++Index) { // outer: same color, fading to zero alpha
+        const SDL_FPoint P = Ring.Points[Index];
+        const SDL_FPoint Nrm = Ring.Normals[Index];
+        const SDL_FPoint Outer{P.x + Nrm.x * Half, P.y + Nrm.y * Half};
+        SDL_FColor OuterColor = LerpAtY(Outer.y);
+        OuterColor.a = 0.0f;
+        Vertices.push_back({Outer, OuterColor, {0.0f, 0.0f}});
+    }
+
+    const int InnerBase = 1;
+    const int OuterBase = 1 + Count;
+    std::vector<int> Indices;
+    Indices.reserve(static_cast<std::size_t>(Count) * 9);
+    for (int Index = 0; Index < Count; ++Index) {
+        const int A = Index;
+        const int B = (Index + 1) % Count;
+        Indices.push_back(0);            Indices.push_back(InnerBase + A); Indices.push_back(InnerBase + B);
+        Indices.push_back(InnerBase + A); Indices.push_back(InnerBase + B); Indices.push_back(OuterBase + B);
+        Indices.push_back(InnerBase + A); Indices.push_back(OuterBase + B); Indices.push_back(OuterBase + A);
+    }
+
+    SDL_RenderGeometry(SdlRenderer, nullptr, Vertices.data(), static_cast<int>(Vertices.size()),
+                       Indices.data(), static_cast<int>(Indices.size()));
+}
+
 void Renderer::DrawRectOutline(Rect RectLogical, Color InColor, float ThicknessLogical,
                                float CornerRadiusLogical) {
     const SDL_FRect R = ToPhysical(RectLogical);
@@ -221,6 +292,123 @@ void Renderer::DrawRectOutline(Rect RectLogical, Color InColor, float ThicknessL
 
     SDL_RenderGeometry(SdlRenderer, nullptr, Vertices.data(), static_cast<int>(Vertices.size()),
                        Indices.data(), static_cast<int>(Indices.size()));
+}
+
+void Renderer::DrawDropShadow(Rect RectLogical, Color ShadowColor, float BlurRadiusLogical,
+                              float CornerRadiusLogical) {
+    if (BlurRadiusLogical <= 0.0f) {
+        return;
+    }
+
+    const SDL_FRect R = ToPhysical(RectLogical);
+    float Radius = CornerRadiusLogical * DpiScaleFactor;
+    Radius = std::min(Radius, std::min(R.w, R.h) * 0.5f);
+    const float Blur = BlurRadiusLogical * DpiScaleFactor;
+
+    // The inner ring sits exactly on the caster's own edge (solid alpha); the widget
+    // itself is drawn on top afterwards and covers the interior, so no centre fill is
+    // needed here -- just the ring, fading outward over Blur instead of the fixed 1px
+    // AA feather.
+    const int Segments = SegmentsForRadius(Radius + Blur);
+    const RoundedRing Ring = BuildRoundedRing(R, Radius, Segments);
+    const int Count = static_cast<int>(Ring.Points.size());
+
+    const SDL_FColor Solid = ToFColor(ShadowColor);
+    SDL_FColor Clear = Solid;
+    Clear.a = 0.0f;
+
+    std::vector<SDL_Vertex> Vertices;
+    Vertices.reserve(static_cast<std::size_t>(2 * Count));
+    for (int Index = 0; Index < Count; ++Index) { // inner: solid, at the caster's edge
+        Vertices.push_back({Ring.Points[Index], Solid, {0.0f, 0.0f}});
+    }
+    for (int Index = 0; Index < Count; ++Index) { // outer: fades to transparent, Blur out
+        const SDL_FPoint P = Ring.Points[Index];
+        const SDL_FPoint Nrm = Ring.Normals[Index];
+        Vertices.push_back({{P.x + Nrm.x * Blur, P.y + Nrm.y * Blur}, Clear, {0.0f, 0.0f}});
+    }
+
+    const int OuterBase = Count;
+    std::vector<int> Indices;
+    Indices.reserve(static_cast<std::size_t>(Count) * 6);
+    for (int Index = 0; Index < Count; ++Index) {
+        const int A = Index;
+        const int B = (Index + 1) % Count;
+        Indices.push_back(A); Indices.push_back(B); Indices.push_back(OuterBase + B);
+        Indices.push_back(A); Indices.push_back(OuterBase + B); Indices.push_back(OuterBase + A);
+    }
+
+    SDL_RenderGeometry(SdlRenderer, nullptr, Vertices.data(), static_cast<int>(Vertices.size()),
+                       Indices.data(), static_cast<int>(Indices.size()));
+}
+
+void Renderer::DrawLine(Point From, Point To, Color InColor, float ThicknessLogical) {
+    const SDL_FPoint P0{From.X * DpiScaleFactor, From.Y * DpiScaleFactor};
+    const SDL_FPoint P1{To.X * DpiScaleFactor, To.Y * DpiScaleFactor};
+    const float Thickness = ThicknessLogical * DpiScaleFactor;
+
+    float DirX = P1.x - P0.x;
+    float DirY = P1.y - P0.y;
+    const float Length = std::sqrt(DirX * DirX + DirY * DirY);
+    if (Length <= 0.0f || Thickness <= 0.0f) {
+        return;
+    }
+    DirX /= Length;
+    DirY /= Length;
+    const float PerpX = -DirY;
+    const float PerpY = DirX;
+
+    const float HalfThickness = Thickness * 0.5f;
+    const float Half = AaFeatherPhysical * 0.5f;
+
+    // Extend the core along the line's own axis by Half so the solid region still
+    // reaches the true endpoints once the perpendicular fringe eats into it -- same
+    // edge-straddling idea as DrawRectOutline's feather, just not re-faded at the caps.
+    const SDL_FPoint CoreStart{P0.x - DirX * Half, P0.y - DirY * Half};
+    const SDL_FPoint CoreEnd{P1.x + DirX * Half, P1.y + DirY * Half};
+
+    auto Offset = [&](SDL_FPoint P, float PerpScale) {
+        return SDL_FPoint{P.x + PerpX * PerpScale, P.y + PerpY * PerpScale};
+    };
+
+    const SDL_FPoint Inner[4] = {
+        Offset(CoreStart, HalfThickness),  Offset(CoreEnd, HalfThickness),
+        Offset(CoreEnd, -HalfThickness),   Offset(CoreStart, -HalfThickness),
+    };
+    const SDL_FPoint Outer[4] = {
+        Offset(CoreStart, HalfThickness + Half), Offset(CoreEnd, HalfThickness + Half),
+        Offset(CoreEnd, -HalfThickness - Half),  Offset(CoreStart, -HalfThickness - Half),
+    };
+
+    const SDL_FColor Solid = ToFColor(InColor);
+    SDL_FColor Clear = Solid;
+    Clear.a = 0.0f;
+
+    SDL_Vertex Vertices[8];
+    for (int Index = 0; Index < 4; ++Index) {
+        Vertices[Index]     = {Inner[Index], Solid, {0.0f, 0.0f}};
+        Vertices[4 + Index] = {Outer[Index], Clear, {0.0f, 0.0f}};
+    }
+
+    // Solid core, plus a fading fringe band on each of the two long (thickness) edges.
+    const int Indices[] = {
+        0, 1, 2,  0, 2, 3,
+        0, 1, 5,  0, 5, 4,
+        2, 3, 7,  2, 7, 6,
+    };
+
+    SDL_RenderGeometry(SdlRenderer, nullptr, Vertices, 8, Indices, 18);
+}
+
+void Renderer::DrawTriangleFilled(Point A, Point B, Point C, Color InColor) {
+    const SDL_FColor Solid = ToFColor(InColor);
+    const SDL_Vertex Vertices[3] = {
+        {{A.X * DpiScaleFactor, A.Y * DpiScaleFactor}, Solid, {0.0f, 0.0f}},
+        {{B.X * DpiScaleFactor, B.Y * DpiScaleFactor}, Solid, {0.0f, 0.0f}},
+        {{C.X * DpiScaleFactor, C.Y * DpiScaleFactor}, Solid, {0.0f, 0.0f}},
+    };
+    const int Indices[3] = {0, 1, 2};
+    SDL_RenderGeometry(SdlRenderer, nullptr, Vertices, 3, Indices, 3);
 }
 
 void Renderer::DrawText(FontHandle Font, std::string_view Text, Point PositionLogical,

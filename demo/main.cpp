@@ -11,6 +11,7 @@
 #include "Penumbra/Widgets/Label.h"
 #include "Penumbra/Widgets/NumericDrag.h"
 #include "Penumbra/Widgets/ScrollablePanel.h"
+#include "Penumbra/Widgets/SplitPanel.h"
 #include "Penumbra/Widgets/TextInput.h"
 #include "Penumbra/Widgets/ViewportWidget.h"
 
@@ -113,6 +114,11 @@ int main() {
         // ---- the settings panel, inside a scrollable viewport ----
         auto Root = std::make_unique<ScrollablePanel>();
         Root->Style            = Demo::ResolvePanelStyle(Theme);
+        // Floating-card gap around the pane, exercising SplitPanel's new Margin support
+        // (docs/penumbra_theming_requirements.md item 1) -- without it this Margin was
+        // silently ignored and the pane tiled edge-to-edge with its sibling.
+        Root->Style.Margin      = {Theme.SpacingLarge, Theme.SpacingLarge,
+                                   Theme.SpacingLarge, Theme.SpacingLarge};
         Root->ChildGap         = Theme.SpacingMedium;
         Root->CrossAlignment   = CrossAlign::Stretch;
         Root->WheelStepLogical = Theme.SpacingLarge * 3.0f;
@@ -210,21 +216,70 @@ int main() {
         // callback) handles the off-screen texture and the blit back into the UI pass.
         auto ScenePane = std::make_unique<ViewportWidget>();
         ScenePane->Style          = Demo::ResolvePanelStyle(Theme);
+        ScenePane->Style.Margin   = {Theme.SpacingLarge, Theme.SpacingLarge,
+                                     Theme.SpacingLarge, Theme.SpacingLarge};
         ScenePane->SceneClearColor = Theme.ColorBackgroundPrimary; // odd cells show this
         ScenePane->OnRenderScene =
             [&Theme](Penumbra::Render::Renderer& SceneRenderer, Penumbra::Point SceneSize) {
-                constexpr int Cells = 8;
+                // Showcase for the new Renderer primitives from
+                // docs/penumbra_theming_requirements.md (items 3-5): a drop shadow sitting
+                // behind a gradient-filled "card", plus a chevron built from two DrawLine
+                // calls and a caret built from one DrawTriangleFilled -- the kind of thing
+                // Pharos would use in place of TreeRow's ASCII '-'/'+' glyph.
+                const Penumbra::Rect Card{SceneSize.X * 0.1f, SceneSize.Y * 0.1f,
+                                          SceneSize.X * 0.8f, SceneSize.Y * 0.35f};
+                SceneRenderer.DrawDropShadow(Card, {0, 0, 0, 140}, 18.0f, Theme.BorderRadiusSmall);
+                SceneRenderer.DrawGradientRect(Card, Theme.ColorAccentHovered, Theme.ColorAccentPressed,
+                                               Theme.BorderRadiusSmall);
+
+                const float ChevronCx = SceneSize.X * 0.3f;
+                const float ChevronCy = SceneSize.Y * 0.62f;
+                const float ChevronR  = 12.0f;
+                SceneRenderer.DrawLine({ChevronCx - ChevronR, ChevronCy - ChevronR},
+                                       {ChevronCx, ChevronCy + ChevronR * 0.4f},
+                                       Theme.ColorTextPrimary, 3.0f);
+                SceneRenderer.DrawLine({ChevronCx, ChevronCy + ChevronR * 0.4f},
+                                       {ChevronCx + ChevronR, ChevronCy - ChevronR},
+                                       Theme.ColorTextPrimary, 3.0f);
+
+                const float CaretCx = SceneSize.X * 0.55f;
+                const float CaretCy = SceneSize.Y * 0.62f;
+                const float CaretR  = 12.0f;
+                SceneRenderer.DrawTriangleFilled({CaretCx - CaretR * 0.6f, CaretCy - CaretR},
+                                                 {CaretCx - CaretR * 0.6f, CaretCy + CaretR},
+                                                 {CaretCx + CaretR * 0.9f, CaretCy},
+                                                 Theme.ColorTextPrimary);
+
+                // Original checkerboard, shifted below the showcase -- still exercises the
+                // off-screen scene texture render-target seam ViewportWidget exists to test.
+                constexpr int Cells = 6;
+                const float Top   = SceneSize.Y * 0.78f;
                 const float CellW = SceneSize.X / static_cast<float>(Cells);
-                const float CellH = SceneSize.Y / static_cast<float>(Cells);
-                for (int Row = 0; Row < Cells; ++Row) {
+                const float CellH = (SceneSize.Y - Top) * 0.5f;
+                for (int Row = 0; Row < 2; ++Row) {
                     for (int Col = 0; Col < Cells; ++Col) {
                         if ((Row + Col) % 2 == 0) {
                             SceneRenderer.DrawFilledRect(
-                                {Col * CellW, Row * CellH, CellW, CellH}, Theme.ColorAccent);
+                                {Col * CellW, Top + Row * CellH, CellW, CellH}, Theme.ColorAccent);
                         }
                     }
                 }
             };
+
+        // Split the two panes with a draggable handle whose margin-driven gap around
+        // each side is only possible now that SplitPanel::Arrange honours Style.Margin.
+        auto Split = std::make_unique<SplitPanel>();
+        SplitPanelStyle SplitStyle;
+        SplitStyle.ColorHandle        = Theme.ColorBorderDefault;
+        SplitStyle.ColorHandleHovered = Theme.ColorAccentHovered;
+        SplitStyle.ColorHandleDragged = Theme.ColorAccentPressed;
+        Split->ApplyStyle(SplitStyle);
+        Split->Axis                   = SplitAxis::Horizontal;
+        Split->HandleThicknessLogical = Theme.SpacingLarge;
+        Split->MinPaneSizeLogical     = 200.0f;
+        Split->SplitRatio             = 0.48f;
+        Split->SetFirst(std::move(Root));
+        Split->SetSecond(std::move(ScenePane));
 
         bool TextInputActive = false;
 
@@ -256,27 +311,19 @@ int main() {
             StatusLabel->Text =
                 "live: value=" + FormatFloat(Drag->Value) + "  name=\"" + Field->Text + "\"";
 
-            // Two panes: settings on the left, the scene viewport on the right.
+            // Settings on the left, the scene viewport on the right, sized by the
+            // SplitPanel; each pane's own Style.Margin (set above) is what produces the
+            // floating-card gap now that SplitPanel::Arrange honours it.
             const Penumbra::Point WindowSize = Window.GetLogicalWindowSize();
-            const float Margin = Theme.SpacingLarge;
-            const float Gap    = Theme.SpacingLarge;
-            const float FullW  = WindowSize.X - 2.0f * Margin;
-            const float FullH  = WindowSize.Y - 2.0f * Margin;
-            const float LeftW  = (FullW - Gap) * 0.48f;
-            const Penumbra::Rect LeftRect{Margin, Margin, LeftW, FullH};
-            const Penumbra::Rect RightRect{Margin + LeftW + Gap, Margin, FullW - LeftW - Gap, FullH};
+            const Penumbra::Rect  FullRect{0.0f, 0.0f, WindowSize.X, WindowSize.Y};
 
-            Root->Measure({LeftRect.W, LeftRect.H});
-            Root->Arrange(LeftRect);
-            ScenePane->Measure({RightRect.W, RightRect.H});
-            ScenePane->Arrange(RightRect);
+            Split->Measure({FullRect.W, FullRect.H});
+            Split->Arrange(FullRect);
 
             if (Input.MouseButtonPressedThisFrame[0]) {
                 Focus.Focused = nullptr;
             }
-            if (!Root->UpdateInteractionState(Input)) {
-                ScenePane->UpdateInteractionState(Input);
-            }
+            Split->UpdateInteractionState(Input);
 
             const bool WantTextInput = (Focus.Focused != nullptr);
             if (WantTextInput != TextInputActive) {
@@ -285,8 +332,7 @@ int main() {
             }
 
             Renderer.BeginFrame(Theme.ColorBackgroundPrimary);
-            Root->Draw(Renderer);
-            ScenePane->Draw(Renderer);
+            Split->Draw(Renderer);
             Renderer.EndFrameAndPresent();
         }
     }

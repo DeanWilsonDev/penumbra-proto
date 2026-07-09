@@ -10,6 +10,16 @@ bool PointInRect(Point Point, Rect Rect) {
            Point.Y >= Rect.Y && Point.Y < Rect.Y + Rect.H;
 }
 constexpr int LeftButton = 0;
+
+float NonNegative(float Value) { return Value > 0.0f ? Value : 0.0f; }
+
+// Insets a rect by a child's margin, same shape as Box::Arrange's margin handling
+// for stack children.
+Rect ApplyMargin(Rect Outer, EdgeInsets Margin) {
+    return {Outer.X + Margin.Left, Outer.Y + Margin.Top,
+            NonNegative(Outer.W - Margin.Left - Margin.Right),
+            NonNegative(Outer.H - Margin.Top - Margin.Bottom)};
+}
 } // namespace
 
 WidgetBase* SplitPanel::SetFirst(std::unique_ptr<WidgetBase> Child) {
@@ -76,12 +86,14 @@ void SplitPanel::Arrange(Rect FinalRectLogical) {
     }
 
     if (First) {
-        First->Measure({FirstRect.W, FirstRect.H});
-        First->Arrange(FirstRect);
+        const Rect Inset = ApplyMargin(FirstRect, First->GetMarginLogical());
+        First->Measure({Inset.W, Inset.H});
+        First->Arrange(Inset);
     }
     if (Second) {
-        Second->Measure({SecondRect.W, SecondRect.H});
-        Second->Arrange(SecondRect);
+        const Rect Inset = ApplyMargin(SecondRect, Second->GetMarginLogical());
+        Second->Measure({Inset.W, Inset.H});
+        Second->Arrange(Inset);
     }
 }
 

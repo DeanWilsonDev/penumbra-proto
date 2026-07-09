@@ -51,13 +51,13 @@ void Checkbox::DrawContent(Render::Renderer& Renderer, Rect ContentRect) {
     if (!Checked) {
         return; // unchecked: Box already drew the empty box background + border
     }
-    Renderer.DrawFilledRect(ContentRect, ColorBoxChecked);
+    Renderer.DrawFilledRect(ContentRect, ColorBoxChecked, Style.BorderRadius);
 
     const float InsetX = ContentRect.W * MarkInsetRatio;
     const float InsetY = ContentRect.H * MarkInsetRatio;
     const Rect Mark{ContentRect.X + InsetX, ContentRect.Y + InsetY,
                     ContentRect.W - 2.0f * InsetX, ContentRect.H - 2.0f * InsetY};
-    Renderer.DrawFilledRect(Mark, ColorCheckMark);
+    Renderer.DrawFilledRect(Mark, ColorCheckMark, Style.BorderRadius * 0.6f);
 }
 
 } // namespace Penumbra::Widgets
