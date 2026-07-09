@@ -56,17 +56,24 @@ int main() {
     {
         Penumbra::Render::SdlTtfFontBackend FontBackend;
         const std::string FontPath = std::string(DEMO_ASSET_DIR) + "/" + FontFileName;
-        const Penumbra::Render::FontHandle BodyFont =
-            FontBackend.LoadFont(FontPath.c_str(), Theme.FontSizeBody, Window.GetDpiScaleFactor());
+        float LastKnownDpiScaleFactor = Window.GetDpiScaleFactor();
+        Penumbra::Render::FontHandle BodyFont =
+            FontBackend.LoadFont(FontPath.c_str(), Theme.FontSizeBody, LastKnownDpiScaleFactor);
 
         Penumbra::Render::Renderer Renderer;
-        if (!Renderer.Initialise(Window.GetSdlRenderer(), Window.GetDpiScaleFactor(), &FontBackend)) {
+        if (!Renderer.Initialise(Window.GetSdlRenderer(), LastKnownDpiScaleFactor, &FontBackend)) {
             std::fprintf(stderr, "Failed to initialise renderer\n");
             Window.Shutdown();
             return 1;
         }
 
         FocusState Focus;
+
+        // Every widget that was handed BodyFont, so a DPI-driven font reload (see the
+        // frame loop below) has somewhere to deliver the new FontHandle. Penumbra has
+        // no widget-tree walk of its own -- a consumer with more than a couple of
+        // fonts/widgets would want its own registry; this demo stands in for one.
+        std::vector<Label*> LabelsUsingBodyFont;
 
         // ---- composition helpers (a stand-in for what UmbraComponentLibrary owns) ----
         auto MakeLabel = [&](const std::string& Text, Penumbra::Render::Color Color) {
@@ -75,6 +82,7 @@ int main() {
             Widget->Font        = BodyFont;
             Widget->Text        = Text;
             Widget->ColorText   = Color;
+            LabelsUsingBodyFont.push_back(Widget.get());
             return Widget;
         };
         auto MakeRow = [&]() {
@@ -224,6 +232,24 @@ int main() {
         bool KeepRunning = true;
         while (KeepRunning) {
             KeepRunning = Window.PumpEventsAndBuildInput(Input);
+
+            // Pick up a DPI scale change (e.g. the window was dragged to a different
+            // display) before this frame draws anything with it.
+            const float CurrentDpiScaleFactor = Window.GetDpiScaleFactor();
+            Renderer.SetDpiScaleFactor(CurrentDpiScaleFactor);
+            if (CurrentDpiScaleFactor != LastKnownDpiScaleFactor) {
+                // Existing FontHandles stay rasterised at the old DPI (Penumbra doesn't
+                // reload them itself -- see docs/penumbra_dpi_requirements.md item 3), so
+                // the demo reloads its one font and repoints every widget at the fresh
+                // handle, the same way Pharos would for its own fonts.
+                BodyFont = FontBackend.LoadFont(FontPath.c_str(), Theme.FontSizeBody, CurrentDpiScaleFactor);
+                for (Label* L : LabelsUsingBodyFont) {
+                    L->Font = BodyFont;
+                }
+                Drag->Font  = BodyFont;
+                Field->Font = BodyFont;
+                LastKnownDpiScaleFactor = CurrentDpiScaleFactor;
+            }
 
             // Live values flow demo state → widget text every frame.
             CountLabel->Text = "Count: " + std::to_string(Counter);

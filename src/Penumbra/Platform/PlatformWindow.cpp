@@ -140,7 +140,8 @@ Point PlatformWindow::GetLogicalWindowSize() const {
 }
 
 float PlatformWindow::GetDpiScaleFactor() const {
-    return DpiScaleFactor;
+    const float Live = SDL_GetWindowDisplayScale(Window);
+    return (Live > 0.0f) ? Live : DpiScaleFactor; // fall back to the cached value if the query fails
 }
 
 void PlatformWindow::SetTextInputActive(bool Active) {

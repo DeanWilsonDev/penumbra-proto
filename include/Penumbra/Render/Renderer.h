@@ -49,6 +49,12 @@ public:
 
     float GetDpiScaleFactor() const;
 
+    // Updates the scale factor used to convert logical -> physical pixels for
+    // every subsequent Draw* call. Call once per frame with the platform's
+    // current value (e.g. from PlatformWindow::GetDpiScaleFactor()) -- cheap to
+    // call even when the value hasn't changed.
+    void SetDpiScaleFactor(float NewScaleFactor);
+
 private:
     SDL_FRect ToPhysical(Rect RectLogical) const;
 

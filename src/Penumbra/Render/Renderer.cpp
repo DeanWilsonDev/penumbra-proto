@@ -303,4 +303,8 @@ float Renderer::GetDpiScaleFactor() const {
     return DpiScaleFactor;
 }
 
+void Renderer::SetDpiScaleFactor(float NewScaleFactor) {
+    DpiScaleFactor = (NewScaleFactor > 0.0f) ? NewScaleFactor : DpiScaleFactor;
+}
+
 } // namespace Penumbra::Render
