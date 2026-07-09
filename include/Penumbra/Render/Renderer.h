@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Penumbra/Geometry.h"
+#include "Penumbra/Render/Color.h"
 #include "Penumbra/Render/IFontBackend.h"
 
 #include <SDL3/SDL.h>
@@ -16,16 +18,16 @@ class Renderer {
 public:
     bool Initialise(SDL_Renderer* SdlRenderer, float DpiScaleFactor, IFontBackend* FontBackend);
 
-    void BeginFrame(SDL_Color ClearColor);
+    void BeginFrame(Color ClearColor);
     void EndFrameAndPresent();
 
     // All coordinates are LOGICAL pixels; the renderer multiplies by DPI scale internally.
     // CornerRadiusLogical 0 (the default) draws square corners via the fast path;
     // a positive radius tessellates a rounded rect through SDL_RenderGeometry.
-    void DrawFilledRect (SDL_FRect RectLogical, SDL_Color Color, float CornerRadiusLogical = 0.0f);
-    void DrawRectOutline(SDL_FRect RectLogical, SDL_Color Color, float ThicknessLogical,
+    void DrawFilledRect (Rect RectLogical, Color InColor, float CornerRadiusLogical = 0.0f);
+    void DrawRectOutline(Rect RectLogical, Color InColor, float ThicknessLogical,
                          float CornerRadiusLogical = 0.0f);
-    void DrawText       (FontHandle Font, std::string_view Text, SDL_FPoint PositionLogical, SDL_Color Color);
+    void DrawText       (FontHandle Font, std::string_view Text, Point PositionLogical, Color InColor);
 
     // Returns the underlying SDL_Renderer so ViewportWidget can manage its off-screen
     // scene texture (create, switch target). Penumbra internals only — Dawn never calls
@@ -34,11 +36,11 @@ public:
 
     // Draws a previously acquired SDL_Texture into a logical-pixel destination rect.
     // Used by ViewportWidget to composite the scene texture back into the UI pass.
-    void DrawTexture(SDL_Texture* Texture, SDL_FRect DestLogical);
+    void DrawTexture(SDL_Texture* Texture, Rect DestLogical);
 
     // Clip stack — every push must be matched by a pop. Nested pushes intersect.
     // Asserted balanced at EndFrameAndPresent.
-    void PushClipRect(SDL_FRect RectLogical);
+    void PushClipRect(Rect RectLogical);
     void PopClipRect();
 
     // Measurement is in logical pixels even though glyphs rasterise at physical size.
@@ -48,7 +50,7 @@ public:
     float GetDpiScaleFactor() const;
 
 private:
-    SDL_FRect ToPhysical(SDL_FRect RectLogical) const;
+    SDL_FRect ToPhysical(Rect RectLogical) const;
 
     SDL_Renderer*         SdlRenderer{nullptr};
     IFontBackend*         FontBackend{nullptr};

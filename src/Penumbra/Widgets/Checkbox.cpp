@@ -3,9 +3,9 @@
 namespace Penumbra::Widgets {
 
 namespace {
-bool PointInRect(SDL_FPoint Point, SDL_FRect Rect) {
-    return Point.x >= Rect.x && Point.x < Rect.x + Rect.w &&
-           Point.y >= Rect.y && Point.y < Rect.y + Rect.h;
+bool PointInRect(Point Point, Rect Rect) {
+    return Point.X >= Rect.X && Point.X < Rect.X + Rect.W &&
+           Point.Y >= Rect.Y && Point.Y < Rect.Y + Rect.H;
 }
 constexpr int LeftButton = 0;
 constexpr float MarkInsetRatio = 0.25f; // proportion of the glyph, not a pixel value
@@ -17,7 +17,7 @@ void Checkbox::ApplyStyle(const CheckboxStyle& Style) {
     ColorBoxChecked = Style.ColorBoxChecked;
 }
 
-SDL_FPoint Checkbox::MeasureContent(SDL_FPoint /*AvailableContentSize*/) {
+Point Checkbox::MeasureContent(Point /*AvailableContentSize*/) {
     return {GlyphSizeLogical, GlyphSizeLogical};
 }
 
@@ -47,16 +47,16 @@ bool Checkbox::UpdateInteractionState(const Platform::InputState& Input) {
     return Hovered;
 }
 
-void Checkbox::DrawContent(Render::Renderer& Renderer, SDL_FRect ContentRect) {
+void Checkbox::DrawContent(Render::Renderer& Renderer, Rect ContentRect) {
     if (!Checked) {
         return; // unchecked: Box already drew the empty box background + border
     }
     Renderer.DrawFilledRect(ContentRect, ColorBoxChecked);
 
-    const float InsetX = ContentRect.w * MarkInsetRatio;
-    const float InsetY = ContentRect.h * MarkInsetRatio;
-    const SDL_FRect Mark{ContentRect.x + InsetX, ContentRect.y + InsetY,
-                         ContentRect.w - 2.0f * InsetX, ContentRect.h - 2.0f * InsetY};
+    const float InsetX = ContentRect.W * MarkInsetRatio;
+    const float InsetY = ContentRect.H * MarkInsetRatio;
+    const Rect Mark{ContentRect.X + InsetX, ContentRect.Y + InsetY,
+                    ContentRect.W - 2.0f * InsetX, ContentRect.H - 2.0f * InsetY};
     Renderer.DrawFilledRect(Mark, ColorCheckMark);
 }
 

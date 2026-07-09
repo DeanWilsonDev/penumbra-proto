@@ -15,11 +15,11 @@ public:
     Render::IFontBackend* FontBackend{nullptr};
     Render::FontHandle    Font{0};
     std::string           Text;
-    SDL_Color             ColorText{0, 0, 0, 0};
+    Render::Color         ColorText{0, 0, 0, 0};
 
 protected:
-    SDL_FPoint MeasureContent(SDL_FPoint AvailableContentSize) override;
-    void       DrawContent(Render::Renderer&, SDL_FRect ContentRect) override;
+    Point MeasureContent(Point AvailableContentSize) override;
+    void  DrawContent(Render::Renderer&, Rect ContentRect) override;
 };
 
 } // namespace Penumbra::Widgets

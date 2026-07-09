@@ -6,9 +6,9 @@
 namespace Penumbra::Widgets {
 
 namespace {
-bool PointInRect(SDL_FPoint Point, SDL_FRect Rect) {
-    return Point.x >= Rect.x && Point.x < Rect.x + Rect.w &&
-           Point.y >= Rect.y && Point.y < Rect.y + Rect.h;
+bool PointInRect(Point Point, Rect Rect) {
+    return Point.X >= Rect.X && Point.X < Rect.X + Rect.W &&
+           Point.Y >= Rect.Y && Point.Y < Rect.Y + Rect.H;
 }
 constexpr int LeftButton = 0;
 } // namespace
@@ -19,7 +19,7 @@ std::string NumericDrag::FormatValue() const {
     return Buffer;
 }
 
-SDL_FPoint NumericDrag::MeasureContent(SDL_FPoint /*AvailableContentSize*/) {
+Point NumericDrag::MeasureContent(Point /*AvailableContentSize*/) {
     if (!FontBackend) {
         return {PreferredWidthLogical, 0.0f};
     }
@@ -40,13 +40,13 @@ bool NumericDrag::UpdateInteractionState(const Platform::InputState& Input) {
 
     if (Pressed && Hovered) {
         Dragging = true;
-        LastMouseX = Input.MousePosition.x;
+        LastMouseX = Input.MousePosition.X;
     }
     if (Dragging && Down) {
-        const float DeltaX = Input.MousePosition.x - LastMouseX;
+        const float DeltaX = Input.MousePosition.X - LastMouseX;
         if (DeltaX != 0.0f) {
             Value += DeltaX * Sensitivity;
-            LastMouseX = Input.MousePosition.x;
+            LastMouseX = Input.MousePosition.X;
             if (OnValueChanged) {
                 OnValueChanged(Value);
             }
@@ -59,8 +59,8 @@ bool NumericDrag::UpdateInteractionState(const Platform::InputState& Input) {
     return Hovered || Dragging;
 }
 
-void NumericDrag::DrawContent(Render::Renderer& Renderer, SDL_FRect ContentRect) {
-    Renderer.DrawText(Font, FormatValue(), {ContentRect.x, ContentRect.y}, ColorText);
+void NumericDrag::DrawContent(Render::Renderer& Renderer, Rect ContentRect) {
+    Renderer.DrawText(Font, FormatValue(), {ContentRect.X, ContentRect.Y}, ColorText);
 }
 
 } // namespace Penumbra::Widgets

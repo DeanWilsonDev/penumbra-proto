@@ -6,9 +6,9 @@
 namespace Penumbra::Widgets {
 
 namespace {
-bool PointInRect(SDL_FPoint Point, SDL_FRect Rect) {
-    return Point.x >= Rect.x && Point.x < Rect.x + Rect.w &&
-           Point.y >= Rect.y && Point.y < Rect.y + Rect.h;
+bool PointInRect(Point Point, Rect Rect) {
+    return Point.X >= Rect.X && Point.X < Rect.X + Rect.W &&
+           Point.Y >= Rect.Y && Point.Y < Rect.Y + Rect.H;
 }
 constexpr int LeftButton = 0;
 } // namespace
@@ -44,7 +44,7 @@ void TextInput::DeleteSelection() {
     SelectionAnchor = Start;
 }
 
-SDL_FPoint TextInput::MeasureContent(SDL_FPoint /*AvailableContentSize*/) {
+Point TextInput::MeasureContent(Point /*AvailableContentSize*/) {
     float LineHeight = 0.0f;
     if (FontBackend) {
         LineHeight = FontBackend->MeasureText(Font, "Ag").HeightLogical;
@@ -57,17 +57,17 @@ bool TextInput::UpdateInteractionState(const Platform::InputState& Input) {
     const bool Pressed  = Input.MouseButtonPressedThisFrame[LeftButton];
     const bool Down     = Input.MouseButtonDown[LeftButton];
     const bool Released = Input.MouseButtonReleasedThisFrame[LeftButton];
-    const SDL_FRect Content = ContentRectFrom(ArrangedRect);
+    const Rect Content = ContentRectFrom(ArrangedRect);
 
     if (Pressed && Hovered && Focus) {
         Focus->Focused = this;
-        const std::size_t Index = CaretIndexAtX(Input.MousePosition.x - Content.x);
+        const std::size_t Index = CaretIndexAtX(Input.MousePosition.X - Content.X);
         CaretIndex = Index;
         SelectionAnchor = Index; // fresh selection at the click point
         Dragging = true;
     }
     if (Dragging && Down && IsFocused()) {
-        CaretIndex = CaretIndexAtX(Input.MousePosition.x - Content.x); // drag extends selection
+        CaretIndex = CaretIndexAtX(Input.MousePosition.X - Content.X); // drag extends selection
     }
     if (Released) {
         Dragging = false;
@@ -77,8 +77,8 @@ bool TextInput::UpdateInteractionState(const Platform::InputState& Input) {
         return Hovered;
     }
 
-    const bool Ctrl  = (Input.ModifierState & SDL_KMOD_CTRL) != 0;
-    const bool Shift = (Input.ModifierState & SDL_KMOD_SHIFT) != 0;
+    const bool Ctrl  = Input.ModifierState.Ctrl;
+    const bool Shift = Input.ModifierState.Shift;
     bool Changed = false;
 
     // Typed text replaces any selection.
@@ -92,26 +92,26 @@ bool TextInput::UpdateInteractionState(const Platform::InputState& Input) {
         Changed = true;
     }
 
-    for (const SDL_Keycode Key : Input.KeysPressedThisFrame) {
+    for (const Platform::Key Key : Input.KeysPressedThisFrame) {
         if (Ctrl) {
             switch (Key) {
-            case SDLK_A:
+            case Platform::Key::A:
                 SelectionAnchor = 0;
                 CaretIndex = Text.size();
                 break;
-            case SDLK_C:
+            case Platform::Key::C:
                 if (HasSelection() && Clipboard) {
                     Clipboard->SetClipboardText(Text.substr(SelectionStart(), SelectionEnd() - SelectionStart()));
                 }
                 break;
-            case SDLK_X:
+            case Platform::Key::X:
                 if (HasSelection() && Clipboard) {
                     Clipboard->SetClipboardText(Text.substr(SelectionStart(), SelectionEnd() - SelectionStart()));
                     DeleteSelection();
                     Changed = true;
                 }
                 break;
-            case SDLK_V:
+            case Platform::Key::V:
                 if (Clipboard) {
                     const std::string Pasted = Clipboard->GetClipboardText();
                     if (!Pasted.empty()) {
@@ -132,7 +132,7 @@ bool TextInput::UpdateInteractionState(const Platform::InputState& Input) {
         }
 
         switch (Key) {
-        case SDLK_BACKSPACE:
+        case Platform::Key::Backspace:
             if (HasSelection()) {
                 DeleteSelection();
                 Changed = true;
@@ -143,7 +143,7 @@ bool TextInput::UpdateInteractionState(const Platform::InputState& Input) {
             }
             SelectionAnchor = CaretIndex;
             break;
-        case SDLK_DELETE:
+        case Platform::Key::Delete:
             if (HasSelection()) {
                 DeleteSelection();
                 Changed = true;
@@ -153,7 +153,7 @@ bool TextInput::UpdateInteractionState(const Platform::InputState& Input) {
             }
             SelectionAnchor = CaretIndex;
             break;
-        case SDLK_LEFT:
+        case Platform::Key::Left:
             if (!Shift && HasSelection()) {
                 CaretIndex = SelectionStart();
             } else if (CaretIndex > 0) {
@@ -163,7 +163,7 @@ bool TextInput::UpdateInteractionState(const Platform::InputState& Input) {
                 SelectionAnchor = CaretIndex;
             }
             break;
-        case SDLK_RIGHT:
+        case Platform::Key::Right:
             if (!Shift && HasSelection()) {
                 CaretIndex = SelectionEnd();
             } else if (CaretIndex < Text.size()) {
@@ -173,13 +173,13 @@ bool TextInput::UpdateInteractionState(const Platform::InputState& Input) {
                 SelectionAnchor = CaretIndex;
             }
             break;
-        case SDLK_HOME:
+        case Platform::Key::Home:
             CaretIndex = 0;
             if (!Shift) {
                 SelectionAnchor = CaretIndex;
             }
             break;
-        case SDLK_END:
+        case Platform::Key::End:
             CaretIndex = Text.size();
             if (!Shift) {
                 SelectionAnchor = CaretIndex;
@@ -196,24 +196,24 @@ bool TextInput::UpdateInteractionState(const Platform::InputState& Input) {
     return true; // a focused field consumes input
 }
 
-void TextInput::DrawContent(Render::Renderer& Renderer, SDL_FRect ContentRect) {
+void TextInput::DrawContent(Render::Renderer& Renderer, Rect ContentRect) {
     // Clip so text/selection longer than the field do not spill past the content rect.
     Renderer.PushClipRect(ContentRect);
 
     const float LineHeight =
-        FontBackend ? FontBackend->MeasureText(Font, "Ag").HeightLogical : ContentRect.h;
+        FontBackend ? FontBackend->MeasureText(Font, "Ag").HeightLogical : ContentRect.H;
 
     if (IsFocused() && HasSelection()) {
-        const float X0 = ContentRect.x + TextWidthTo(SelectionStart());
-        const float X1 = ContentRect.x + TextWidthTo(SelectionEnd());
-        Renderer.DrawFilledRect({X0, ContentRect.y, X1 - X0, LineHeight}, ColorSelection);
+        const float X0 = ContentRect.X + TextWidthTo(SelectionStart());
+        const float X1 = ContentRect.X + TextWidthTo(SelectionEnd());
+        Renderer.DrawFilledRect({X0, ContentRect.Y, X1 - X0, LineHeight}, ColorSelection);
     }
 
-    Renderer.DrawText(Font, Text, {ContentRect.x, ContentRect.y}, ColorText);
+    Renderer.DrawText(Font, Text, {ContentRect.X, ContentRect.Y}, ColorText);
 
     if (IsFocused()) {
-        const float CaretX = ContentRect.x + TextWidthTo(CaretIndex);
-        Renderer.DrawFilledRect({CaretX, ContentRect.y, CaretWidthLogical, LineHeight}, ColorCaret);
+        const float CaretX = ContentRect.X + TextWidthTo(CaretIndex);
+        Renderer.DrawFilledRect({CaretX, ContentRect.Y, CaretWidthLogical, LineHeight}, ColorCaret);
     }
 
     Renderer.PopClipRect();

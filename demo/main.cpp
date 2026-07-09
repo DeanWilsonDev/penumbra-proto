@@ -44,7 +44,7 @@ int main() {
 
     Penumbra::Platform::PlatformWindow Window;
     if (!Window.Initialise("Penumbra Demo", WindowLogicalWidth, WindowLogicalHeight)) {
-        std::fprintf(stderr, "Failed to initialise platform window: %s\n", SDL_GetError());
+        std::fprintf(stderr, "Failed to initialise platform window: %s\n", Window.GetLastError().c_str());
         return 1;
     }
 
@@ -69,7 +69,7 @@ int main() {
         FocusState Focus;
 
         // ---- composition helpers (a stand-in for what UmbraComponentLibrary owns) ----
-        auto MakeLabel = [&](const std::string& Text, SDL_Color Color) {
+        auto MakeLabel = [&](const std::string& Text, Penumbra::Render::Color Color) {
             auto Widget = std::make_unique<Label>();
             Widget->FontBackend = &FontBackend;
             Widget->Font        = BodyFont;
@@ -204,10 +204,10 @@ int main() {
         ScenePane->Style          = Demo::ResolvePanelStyle(Theme);
         ScenePane->SceneClearColor = Theme.ColorBackgroundPrimary; // odd cells show this
         ScenePane->OnRenderScene =
-            [&Theme](Penumbra::Render::Renderer& SceneRenderer, SDL_FPoint SceneSize) {
+            [&Theme](Penumbra::Render::Renderer& SceneRenderer, Penumbra::Point SceneSize) {
                 constexpr int Cells = 8;
-                const float CellW = SceneSize.x / static_cast<float>(Cells);
-                const float CellH = SceneSize.y / static_cast<float>(Cells);
+                const float CellW = SceneSize.X / static_cast<float>(Cells);
+                const float CellH = SceneSize.Y / static_cast<float>(Cells);
                 for (int Row = 0; Row < Cells; ++Row) {
                     for (int Col = 0; Col < Cells; ++Col) {
                         if ((Row + Col) % 2 == 0) {
@@ -231,18 +231,18 @@ int main() {
                 "live: value=" + FormatFloat(Drag->Value) + "  name=\"" + Field->Text + "\"";
 
             // Two panes: settings on the left, the scene viewport on the right.
-            const SDL_FPoint WindowSize = Window.GetLogicalWindowSize();
+            const Penumbra::Point WindowSize = Window.GetLogicalWindowSize();
             const float Margin = Theme.SpacingLarge;
             const float Gap    = Theme.SpacingLarge;
-            const float FullW  = WindowSize.x - 2.0f * Margin;
-            const float FullH  = WindowSize.y - 2.0f * Margin;
+            const float FullW  = WindowSize.X - 2.0f * Margin;
+            const float FullH  = WindowSize.Y - 2.0f * Margin;
             const float LeftW  = (FullW - Gap) * 0.48f;
-            const SDL_FRect LeftRect{Margin, Margin, LeftW, FullH};
-            const SDL_FRect RightRect{Margin + LeftW + Gap, Margin, FullW - LeftW - Gap, FullH};
+            const Penumbra::Rect LeftRect{Margin, Margin, LeftW, FullH};
+            const Penumbra::Rect RightRect{Margin + LeftW + Gap, Margin, FullW - LeftW - Gap, FullH};
 
-            Root->Measure({LeftRect.w, LeftRect.h});
+            Root->Measure({LeftRect.W, LeftRect.H});
             Root->Arrange(LeftRect);
-            ScenePane->Measure({RightRect.w, RightRect.h});
+            ScenePane->Measure({RightRect.W, RightRect.H});
             ScenePane->Arrange(RightRect);
 
             if (Input.MouseButtonPressedThisFrame[0]) {

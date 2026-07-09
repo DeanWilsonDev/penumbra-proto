@@ -2,6 +2,8 @@
 
 #include "Penumbra/Widgets/Box.h"
 
+#include <SDL3/SDL.h>
+
 #include <functional>
 
 namespace Penumbra::Widgets {
@@ -19,21 +21,21 @@ public:
     // Renderer is already targeting the scene texture when this fires.
     // SceneSizeLogical is the content rect size in logical pixels — use it
     // to derive viewport bounds, not any SDL query.
-    std::function<void(Render::Renderer&, SDL_FPoint SceneSizeLogical)> OnRenderScene;
+    std::function<void(Render::Renderer&, Point SceneSizeLogical)> OnRenderScene;
 
     // Called when a mouse event falls inside the content rect and was not consumed
     // by any child widget (UI overlays inside the viewport get first refusal).
     // ContentRect is the logical content area; the consumer uses it to map screen
     // coordinates to scene coordinates. Returns true if the event was consumed.
-    std::function<bool(const Platform::InputState&, SDL_FRect ContentRect)> OnSceneInput;
+    std::function<bool(const Platform::InputState&, Rect ContentRect)> OnSceneInput;
 
     // Color the scene texture is cleared to before OnRenderScene fires.
     // No default opinion beyond opaque black — the consumer sets this.
-    SDL_Color SceneClearColor{0, 0, 0, 255};
+    Render::Color SceneClearColor{0, 0, 0, 255};
 
-    SDL_FPoint Measure(SDL_FPoint AvailableSizeLogical) override;
-    void       Arrange(SDL_FRect FinalRectLogical) override;
-    bool       UpdateInteractionState(const Platform::InputState&) override;
+    Point Measure(Point AvailableSizeLogical) override;
+    void  Arrange(Rect FinalRectLogical) override;
+    bool  UpdateInteractionState(const Platform::InputState&) override;
 
     ~ViewportWidget() override;
 
@@ -41,14 +43,14 @@ protected:
     // The scene render-to-texture + blit happens here, the standard Box extension
     // point. Box::Draw frames the widget (background, border), calls this to composite
     // the scene into the content rect, then draws children as overlays on top.
-    void DrawContent(Render::Renderer&, SDL_FRect ContentRect) override;
+    void DrawContent(Render::Renderer&, Rect ContentRect) override;
 
 private:
     void RecreateSceneTexture(Render::Renderer&);
 
     SDL_Texture* SceneTexture{nullptr};
-    SDL_FPoint   SceneTextureSizePhysical{0.0f, 0.0f}; // tracks current texture size
-    SDL_FPoint   ContentSizeLogical{0.0f, 0.0f};       // from last Arrange
+    Point        SceneTextureSizePhysical{0.0f, 0.0f}; // tracks current texture size
+    Point        ContentSizeLogical{0.0f, 0.0f};       // from last Arrange
 };
 
 } // namespace Penumbra::Widgets

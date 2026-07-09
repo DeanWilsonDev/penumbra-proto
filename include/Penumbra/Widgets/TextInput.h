@@ -20,9 +20,9 @@ class TextInput : public Box {
 public:
     Render::IFontBackend* FontBackend{nullptr};
     Render::FontHandle    Font{0};
-    SDL_Color             ColorText{0, 0, 0, 0};
-    SDL_Color             ColorCaret{0, 0, 0, 0};
-    SDL_Color             ColorSelection{0, 0, 0, 0};
+    Render::Color         ColorText{0, 0, 0, 0};
+    Render::Color         ColorCaret{0, 0, 0, 0};
+    Render::Color         ColorSelection{0, 0, 0, 0};
     float                 CaretWidthLogical{0.0f};   // demo-supplied
     float                 PreferredWidthLogical{0.0f}; // demo-supplied field width
 
@@ -35,8 +35,8 @@ public:
     bool UpdateInteractionState(const Platform::InputState&) override;
 
 protected:
-    SDL_FPoint MeasureContent(SDL_FPoint AvailableContentSize) override;
-    void       DrawContent(Render::Renderer&, SDL_FRect ContentRect) override;
+    Point MeasureContent(Point AvailableContentSize) override;
+    void  DrawContent(Render::Renderer&, Rect ContentRect) override;
 
 private:
     bool IsFocused() const { return Focus != nullptr && Focus->Focused == this; }

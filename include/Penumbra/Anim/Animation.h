@@ -1,9 +1,10 @@
 #pragma once
 
-#include <SDL3/SDL.h>
+#include "Penumbra/Render/Color.h"
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 // Small, header-only animation toolkit. Two models, because they answer different
 // questions:
@@ -23,12 +24,12 @@ inline float Approach(float Current, float Target, float DeltaSeconds, float Tim
     return Current + (Target - Current) * Factor;
 }
 
-inline SDL_Color LerpColor(SDL_Color A, SDL_Color B, float T) {
+inline Render::Color LerpColor(Render::Color A, Render::Color B, float T) {
     T = std::clamp(T, 0.0f, 1.0f);
-    const auto Mix = [&](Uint8 a, Uint8 b) {
-        return static_cast<Uint8>(std::lround(a + (b - a) * T));
+    const auto Mix = [&](std::uint8_t a, std::uint8_t b) {
+        return static_cast<std::uint8_t>(std::lround(a + (b - a) * T));
     };
-    return {Mix(A.r, B.r), Mix(A.g, B.g), Mix(A.b, B.b), Mix(A.a, B.a)};
+    return {Mix(A.R, B.R), Mix(A.G, B.G), Mix(A.B, B.B), Mix(A.A, B.A)};
 }
 
 // A colour that eases toward whatever target it is handed each frame. Channels are
@@ -40,28 +41,28 @@ struct AnimatedColor {
     float A{0.0f};
     bool  Initialised{false};
 
-    void SnapTo(SDL_Color Target) {
-        R = Target.r;
-        G = Target.g;
-        B = Target.b;
-        A = Target.a;
+    void SnapTo(Render::Color Target) {
+        R = Target.R;
+        G = Target.G;
+        B = Target.B;
+        A = Target.A;
         Initialised = true;
     }
 
-    void Animate(SDL_Color Target, float DeltaSeconds, float TimeConstantSeconds) {
+    void Animate(Render::Color Target, float DeltaSeconds, float TimeConstantSeconds) {
         if (!Initialised) {
             SnapTo(Target); // first frame: no fade-in from nothing
             return;
         }
-        R = Approach(R, Target.r, DeltaSeconds, TimeConstantSeconds);
-        G = Approach(G, Target.g, DeltaSeconds, TimeConstantSeconds);
-        B = Approach(B, Target.b, DeltaSeconds, TimeConstantSeconds);
-        A = Approach(A, Target.a, DeltaSeconds, TimeConstantSeconds);
+        R = Approach(R, Target.R, DeltaSeconds, TimeConstantSeconds);
+        G = Approach(G, Target.G, DeltaSeconds, TimeConstantSeconds);
+        B = Approach(B, Target.B, DeltaSeconds, TimeConstantSeconds);
+        A = Approach(A, Target.A, DeltaSeconds, TimeConstantSeconds);
     }
 
-    SDL_Color Value() const {
+    Render::Color Value() const {
         const auto Clamp = [](float V) {
-            return static_cast<Uint8>(std::lround(std::clamp(V, 0.0f, 255.0f)));
+            return static_cast<std::uint8_t>(std::lround(std::clamp(V, 0.0f, 255.0f)));
         };
         return {Clamp(R), Clamp(G), Clamp(B), Clamp(A)};
     }

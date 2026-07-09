@@ -15,26 +15,26 @@ WidgetBase* Box::AddChild(std::unique_ptr<WidgetBase> Child) {
     return Raw;
 }
 
-SDL_FPoint Box::FrameSize() const {
+Point Box::FrameSize() const {
     const float Horizontal = Style.Padding.Left + Style.Padding.Right + 2.0f * Style.BorderWidth;
     const float Vertical   = Style.Padding.Top + Style.Padding.Bottom + 2.0f * Style.BorderWidth;
     return {Horizontal, Vertical};
 }
 
-SDL_FRect Box::ContentRectFrom(SDL_FRect OuterRect) const {
+Rect Box::ContentRectFrom(Rect OuterRect) const {
     const float B = Style.BorderWidth;
-    return {OuterRect.x + B + Style.Padding.Left,
-            OuterRect.y + B + Style.Padding.Top,
-            NonNegative(OuterRect.w - 2.0f * B - Style.Padding.Left - Style.Padding.Right),
-            NonNegative(OuterRect.h - 2.0f * B - Style.Padding.Top - Style.Padding.Bottom)};
+    return {OuterRect.X + B + Style.Padding.Left,
+            OuterRect.Y + B + Style.Padding.Top,
+            NonNegative(OuterRect.W - 2.0f * B - Style.Padding.Left - Style.Padding.Right),
+            NonNegative(OuterRect.H - 2.0f * B - Style.Padding.Top - Style.Padding.Bottom)};
 }
 
-SDL_FPoint Box::Measure(SDL_FPoint AvailableSizeLogical) {
-    const SDL_FPoint Frame = FrameSize();
-    const SDL_FPoint ContentAvailable{NonNegative(AvailableSizeLogical.x - Frame.x),
-                                      NonNegative(AvailableSizeLogical.y - Frame.y)};
+Point Box::Measure(Point AvailableSizeLogical) {
+    const Point Frame = FrameSize();
+    const Point ContentAvailable{NonNegative(AvailableSizeLogical.X - Frame.X),
+                                 NonNegative(AvailableSizeLogical.Y - Frame.Y)};
 
-    SDL_FPoint ContentDesired{0.0f, 0.0f};
+    Point ContentDesired{0.0f, 0.0f};
 
     if (Layout == LayoutMode::None) {
         ContentDesired = MeasureContent(ContentAvailable);
@@ -42,41 +42,46 @@ SDL_FPoint Box::Measure(SDL_FPoint AvailableSizeLogical) {
         const bool Vertical = (Layout == LayoutMode::VerticalStack);
         float MainTotal = 0.0f;
         float CrossMax  = 0.0f;
+        bool  AnyVisible = false;
 
         for (std::size_t Index = 0; Index < Children.size(); ++Index) {
             WidgetBase* Child = Children[Index].get();
+            if (!Child->GetIsVisible()) {
+                continue; // absent, not zero-sized-but-present: no gap counted either
+            }
             const EdgeInsets Margin = Child->GetMarginLogical();
 
-            const SDL_FPoint ChildAvailable{NonNegative(ContentAvailable.x - Margin.Left - Margin.Right),
-                                            NonNegative(ContentAvailable.y - Margin.Top - Margin.Bottom)};
-            const SDL_FPoint Desired = Child->Measure(ChildAvailable);
+            const Point ChildAvailable{NonNegative(ContentAvailable.X - Margin.Left - Margin.Right),
+                                       NonNegative(ContentAvailable.Y - Margin.Top - Margin.Bottom)};
+            const Point Desired = Child->Measure(ChildAvailable);
 
-            const float ChildMain   = Vertical ? Desired.y : Desired.x;
-            const float ChildCross  = Vertical ? Desired.x : Desired.y;
+            const float ChildMain   = Vertical ? Desired.Y : Desired.X;
+            const float ChildCross  = Vertical ? Desired.X : Desired.Y;
             const float MarginMain  = Vertical ? (Margin.Top + Margin.Bottom) : (Margin.Left + Margin.Right);
             const float MarginCross = Vertical ? (Margin.Left + Margin.Right) : (Margin.Top + Margin.Bottom);
 
-            if (Index > 0) {
+            if (AnyVisible) {
                 MainTotal += ChildGap;
             }
             MainTotal += ChildMain + MarginMain;
             CrossMax = std::max(CrossMax, ChildCross + MarginCross);
+            AnyVisible = true;
         }
 
-        ContentDesired = Vertical ? SDL_FPoint{CrossMax, MainTotal} : SDL_FPoint{MainTotal, CrossMax};
+        ContentDesired = Vertical ? Point{CrossMax, MainTotal} : Point{MainTotal, CrossMax};
     }
 
-    return {ContentDesired.x + Frame.x, ContentDesired.y + Frame.y};
+    return {ContentDesired.X + Frame.X, ContentDesired.Y + Frame.Y};
 }
 
-void Box::Arrange(SDL_FRect FinalRectLogical) {
+void Box::Arrange(Rect FinalRectLogical) {
     ArrangedRect = FinalRectLogical;
 
     if (Layout == LayoutMode::None) {
         return; // children, if any, are not laid out (footgun accepted)
     }
 
-    const SDL_FRect Content = ContentRectFrom(FinalRectLogical);
+    const Rect Content = ContentRectFrom(FinalRectLogical);
     const bool Vertical = (Layout == LayoutMode::VerticalStack);
 
     // Places a child along the CROSS axis, returning its {position, extent}.
@@ -97,39 +102,48 @@ void Box::Arrange(SDL_FRect FinalRectLogical) {
     };
 
     const std::size_t Count = Children.size();
-    float Cursor = Vertical ? Content.y : Content.x;
+    float Cursor = Vertical ? Content.Y : Content.X;
+    bool  AnyVisible = false;
 
     for (std::size_t Index = 0; Index < Count; ++Index) {
         WidgetBase* Child = Children[Index].get();
+        if (!Child->GetIsVisible()) {
+            continue; // not arranged: an un-arranged widget keeps its last ArrangedRect
+        }
         const EdgeInsets Margin = Child->GetMarginLogical();
 
-        const SDL_FPoint ChildAvailable{NonNegative(Content.w - Margin.Left - Margin.Right),
-                                        NonNegative(Content.h - Margin.Top - Margin.Bottom)};
-        const SDL_FPoint Desired = Child->Measure(ChildAvailable);
+        const Point ChildAvailable{NonNegative(Content.W - Margin.Left - Margin.Right),
+                                   NonNegative(Content.H - Margin.Top - Margin.Bottom)};
+        const Point Desired = Child->Measure(ChildAvailable);
+
+        if (AnyVisible) {
+            Cursor += ChildGap;
+        }
 
         if (Vertical) {
             auto [CrossPos, CrossExtent] =
-                PlaceCross(Content.x, Content.w, Desired.x, Margin.Left, Margin.Right);
+                PlaceCross(Content.X, Content.W, Desired.X, Margin.Left, Margin.Right);
             const float Top = Cursor + Margin.Top;
-            Child->Arrange({CrossPos, Top, CrossExtent, Desired.y});
-            Cursor = Top + Desired.y + Margin.Bottom;
+            Child->Arrange({CrossPos, Top, CrossExtent, Desired.Y});
+            Cursor = Top + Desired.Y + Margin.Bottom;
         } else {
             auto [CrossPos, CrossExtent] =
-                PlaceCross(Content.y, Content.h, Desired.y, Margin.Top, Margin.Bottom);
+                PlaceCross(Content.Y, Content.H, Desired.Y, Margin.Top, Margin.Bottom);
             const float Left = Cursor + Margin.Left;
-            Child->Arrange({Left, CrossPos, Desired.x, CrossExtent});
-            Cursor = Left + Desired.x + Margin.Right;
+            Child->Arrange({Left, CrossPos, Desired.X, CrossExtent});
+            Cursor = Left + Desired.X + Margin.Right;
         }
 
-        if (Index + 1 < Count) {
-            Cursor += ChildGap;
-        }
+        AnyVisible = true;
     }
 }
 
 bool Box::UpdateInteractionState(const Platform::InputState& Input) {
     // Depth-first, last child (drawn on top) gets first refusal.
     for (auto Iterator = Children.rbegin(); Iterator != Children.rend(); ++Iterator) {
+        if (!(*Iterator)->GetIsVisible()) {
+            continue; // a hidden subtree can't consume input
+        }
         if ((*Iterator)->UpdateInteractionState(Input)) {
             return true;
         }
@@ -138,16 +152,19 @@ bool Box::UpdateInteractionState(const Platform::InputState& Input) {
 }
 
 void Box::Draw(Render::Renderer& Renderer) {
-    if (Style.ColorBackground.a != 0) {
+    if (Style.ColorBackground.A != 0) {
         Renderer.DrawFilledRect(ArrangedRect, Style.ColorBackground, Style.BorderRadius);
     }
-    if (Style.BorderWidth > 0.0f && Style.ColorBorder.a != 0) {
+    if (Style.BorderWidth > 0.0f && Style.ColorBorder.A != 0) {
         Renderer.DrawRectOutline(ArrangedRect, Style.ColorBorder, Style.BorderWidth, Style.BorderRadius);
     }
 
     DrawContent(Renderer, ContentRectFrom(ArrangedRect));
 
     for (auto& Child : Children) {
+        if (!Child->GetIsVisible()) {
+            continue;
+        }
         Child->Draw(Renderer);
     }
 }

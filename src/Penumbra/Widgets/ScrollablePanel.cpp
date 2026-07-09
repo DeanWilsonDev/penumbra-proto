@@ -13,70 +13,70 @@ float Clamp(float Value, float Low, float High) {
     return std::min(std::max(Value, Low), High);
 }
 
-bool PointInRect(SDL_FPoint Point, SDL_FRect Rect) {
-    return Point.x >= Rect.x && Point.x < Rect.x + Rect.w &&
-           Point.y >= Rect.y && Point.y < Rect.y + Rect.h;
+bool PointInRect(Point Point, Rect Rect) {
+    return Point.X >= Rect.X && Point.X < Rect.X + Rect.W &&
+           Point.Y >= Rect.Y && Point.Y < Rect.Y + Rect.H;
 }
 
 } // namespace
 
-SDL_FPoint ScrollablePanel::Measure(SDL_FPoint AvailableSizeLogical) {
-    const SDL_FPoint Frame = FrameSize();
-    const SDL_FPoint ContentAvailable{NonNegative(AvailableSizeLogical.x - Frame.x),
-                                      NonNegative(AvailableSizeLogical.y - Frame.y)};
+Point ScrollablePanel::Measure(Point AvailableSizeLogical) {
+    const Point Frame = FrameSize();
+    const Point ContentAvailable{NonNegative(AvailableSizeLogical.X - Frame.X),
+                                 NonNegative(AvailableSizeLogical.Y - Frame.Y)};
 
     float Total = 0.0f;
     float MaxWidth = 0.0f;
     for (std::size_t Index = 0; Index < Children.size(); ++Index) {
         WidgetBase* Child = Children[Index].get();
         const EdgeInsets Margin = Child->GetMarginLogical();
-        const SDL_FPoint ChildAvailable{NonNegative(ContentAvailable.x - Margin.Left - Margin.Right),
-                                        NonNegative(ContentAvailable.y - Margin.Top - Margin.Bottom)};
-        const SDL_FPoint Desired = Child->Measure(ChildAvailable);
+        const Point ChildAvailable{NonNegative(ContentAvailable.X - Margin.Left - Margin.Right),
+                                   NonNegative(ContentAvailable.Y - Margin.Top - Margin.Bottom)};
+        const Point Desired = Child->Measure(ChildAvailable);
 
         if (Index > 0) {
             Total += ChildGap;
         }
-        Total += Desired.y + Margin.Top + Margin.Bottom;
-        MaxWidth = std::max(MaxWidth, Desired.x + Margin.Left + Margin.Right);
+        Total += Desired.Y + Margin.Top + Margin.Bottom;
+        MaxWidth = std::max(MaxWidth, Desired.X + Margin.Left + Margin.Right);
     }
 
     ContentHeight = Total;
 
     // The panel fills the height it is offered (it is a viewport, not content-sized).
-    return {MaxWidth + Frame.x, AvailableSizeLogical.y};
+    return {MaxWidth + Frame.X, AvailableSizeLogical.Y};
 }
 
-void ScrollablePanel::Arrange(SDL_FRect FinalRectLogical) {
+void ScrollablePanel::Arrange(Rect FinalRectLogical) {
     ArrangedRect = FinalRectLogical;
 
-    const SDL_FRect Content = ContentRectFrom(FinalRectLogical);
-    const float MaxScroll = NonNegative(ContentHeight - Content.h);
+    const Rect Content = ContentRectFrom(FinalRectLogical);
+    const float MaxScroll = NonNegative(ContentHeight - Content.H);
     ScrollOffsetY = Clamp(ScrollOffsetY, 0.0f, MaxScroll);
 
     // Lay children out as a vertical column, shifted up by the scroll offset.
     // Positions may fall outside the viewport; the clip in Draw hides them.
-    float CursorY = Content.y - ScrollOffsetY;
+    float CursorY = Content.Y - ScrollOffsetY;
     const std::size_t Count = Children.size();
     for (std::size_t Index = 0; Index < Count; ++Index) {
         WidgetBase* Child = Children[Index].get();
         const EdgeInsets Margin = Child->GetMarginLogical();
 
-        const SDL_FPoint ChildAvailable{NonNegative(Content.w - Margin.Left - Margin.Right),
-                                        NonNegative(Content.h - Margin.Top - Margin.Bottom)};
-        const SDL_FPoint Desired = Child->Measure(ChildAvailable);
+        const Point ChildAvailable{NonNegative(Content.W - Margin.Left - Margin.Right),
+                                   NonNegative(Content.H - Margin.Top - Margin.Bottom)};
+        const Point Desired = Child->Measure(ChildAvailable);
 
-        const float AvailableCross = NonNegative(Content.w - Margin.Left - Margin.Right);
-        float ChildX = Content.x + Margin.Left;
-        float ChildWidth = Desired.x;
+        const float AvailableCross = NonNegative(Content.W - Margin.Left - Margin.Right);
+        float ChildX = Content.X + Margin.Left;
+        float ChildWidth = Desired.X;
         switch (CrossAlignment) {
         case CrossAlign::Start:
             break;
         case CrossAlign::Center:
-            ChildX = Content.x + Margin.Left + (AvailableCross - Desired.x) / 2.0f;
+            ChildX = Content.X + Margin.Left + (AvailableCross - Desired.X) / 2.0f;
             break;
         case CrossAlign::End:
-            ChildX = Content.x + Content.w - Margin.Right - Desired.x;
+            ChildX = Content.X + Content.W - Margin.Right - Desired.X;
             break;
         case CrossAlign::Stretch:
             ChildWidth = AvailableCross;
@@ -84,9 +84,9 @@ void ScrollablePanel::Arrange(SDL_FRect FinalRectLogical) {
         }
 
         const float ChildY = CursorY + Margin.Top;
-        Child->Arrange({ChildX, ChildY, ChildWidth, Desired.y});
+        Child->Arrange({ChildX, ChildY, ChildWidth, Desired.Y});
 
-        CursorY = ChildY + Desired.y + Margin.Bottom;
+        CursorY = ChildY + Desired.Y + Margin.Bottom;
         if (Index + 1 < Count) {
             CursorY += ChildGap;
         }
@@ -101,7 +101,7 @@ bool ScrollablePanel::UpdateInteractionState(const Platform::InputState& Input) 
 
     // Children's hit region is restricted to the clipped content rect, so widgets
     // scrolled out of view cannot be interacted with.
-    const SDL_FRect Content = ContentRectFrom(ArrangedRect);
+    const Rect Content = ContentRectFrom(ArrangedRect);
     bool Consumed = false;
     if (PointInRect(Input.MousePosition, Content)) {
         for (auto Iterator = Children.rbegin(); Iterator != Children.rend(); ++Iterator) {
@@ -113,7 +113,7 @@ bool ScrollablePanel::UpdateInteractionState(const Platform::InputState& Input) 
     }
 
     if (WheelStepLogical != 0.0f && Input.MouseWheelDelta != 0.0f) {
-        const float MaxScroll = NonNegative(ContentHeight - Content.h);
+        const float MaxScroll = NonNegative(ContentHeight - Content.H);
         ScrollOffsetY = Clamp(ScrollOffsetY - Input.MouseWheelDelta * WheelStepLogical, 0.0f, MaxScroll);
         Consumed = true;
     }
@@ -123,14 +123,14 @@ bool ScrollablePanel::UpdateInteractionState(const Platform::InputState& Input) 
 }
 
 void ScrollablePanel::Draw(Render::Renderer& Renderer) {
-    if (Style.ColorBackground.a != 0) {
+    if (Style.ColorBackground.A != 0) {
         Renderer.DrawFilledRect(ArrangedRect, Style.ColorBackground, Style.BorderRadius);
     }
-    if (Style.BorderWidth > 0.0f && Style.ColorBorder.a != 0) {
+    if (Style.BorderWidth > 0.0f && Style.ColorBorder.A != 0) {
         Renderer.DrawRectOutline(ArrangedRect, Style.ColorBorder, Style.BorderWidth, Style.BorderRadius);
     }
 
-    const SDL_FRect Content = ContentRectFrom(ArrangedRect);
+    const Rect Content = ContentRectFrom(ArrangedRect);
     Renderer.PushClipRect(Content);
     for (auto& Child : Children) {
         Child->Draw(Renderer);

@@ -31,11 +31,15 @@ add_library(penumbra STATIC
     src/Penumbra/Widgets/Checkbox.cpp
     src/Penumbra/Widgets/NumericDrag.cpp
     src/Penumbra/Widgets/TextInput.cpp
-    src/Penumbra/Widgets/ViewportWidget.cpp)
+    src/Penumbra/Widgets/ViewportWidget.cpp
+    src/Penumbra/Widgets/SplitPanel.cpp)
 
 target_include_directories(penumbra PUBLIC include)
 
-# SDL3 is PUBLIC so the demo sees SDL types (e.g. SDL_Color) transitively.
+# SDL3 is linked PUBLIC because a couple of internals (ViewportWidget's scene
+# texture, PlatformWindow's SDL_Renderer*) are legitimate exceptions to
+# Penumbra's own "no SDL above Platform" rule; the demo does not need an SDL
+# include for ordinary widget/color/geometry code (Color/Point/Rect/Key cover it).
 # SDL3_ttf is linked now though only used from Milestone 1 onward.
 target_link_libraries(penumbra PUBLIC SDL3::SDL3 SDL3_ttf::SDL3_ttf)
 

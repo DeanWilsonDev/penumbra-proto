@@ -1,6 +1,6 @@
 #pragma once
 
-#include <SDL3/SDL.h>
+#include "Penumbra/Render/Color.h"
 
 namespace Demo {
 
@@ -11,16 +11,16 @@ struct Theme {
     float SpacingMedium = 12.0f;
     float SpacingLarge  = 16.0f;
 
-    SDL_Color ColorBackgroundPrimary = {26, 26, 26, 255};
-    SDL_Color ColorSurfaceRaised     = {58, 58, 65, 255};
-    SDL_Color ColorAccent            = {77, 127, 235, 255};
-    SDL_Color ColorAccentHovered     = {97, 147, 255, 255};
-    SDL_Color ColorAccentPressed     = {57, 107, 215, 255};
-    SDL_Color ColorTextPrimary       = {235, 235, 235, 255};
-    SDL_Color ColorTextDisabled      = {120, 120, 128, 255};
-    SDL_Color ColorBorderDefault     = {70, 70, 75, 255};
-    SDL_Color ColorControlDisabled   = {45, 45, 50, 255};
-    SDL_Color ColorSelection         = {77, 127, 235, 120}; // translucent accent
+    Penumbra::Render::Color ColorBackgroundPrimary = {26, 26, 26, 255};
+    Penumbra::Render::Color ColorSurfaceRaised     = {58, 58, 65, 255};
+    Penumbra::Render::Color ColorAccent            = {77, 127, 235, 255};
+    Penumbra::Render::Color ColorAccentHovered     = {97, 147, 255, 255};
+    Penumbra::Render::Color ColorAccentPressed     = {57, 107, 215, 255};
+    Penumbra::Render::Color ColorTextPrimary       = {235, 235, 235, 255};
+    Penumbra::Render::Color ColorTextDisabled      = {120, 120, 128, 255};
+    Penumbra::Render::Color ColorBorderDefault     = {70, 70, 75, 255};
+    Penumbra::Render::Color ColorControlDisabled   = {45, 45, 50, 255};
+    Penumbra::Render::Color ColorSelection         = {77, 127, 235, 120}; // translucent accent
 
     float BorderRadiusSmall  = 20.0f;
     float BorderWidthDefault = 1.0f;

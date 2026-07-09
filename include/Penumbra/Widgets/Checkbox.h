@@ -10,10 +10,10 @@ namespace Penumbra::Widgets {
 // size is GlyphSizeLogical (a value the demo supplies) plus the box-model frame.
 class Checkbox : public Box {
 public:
-    SDL_Color ColorCheckMark{0, 0, 0, 0};
-    SDL_Color ColorBoxChecked{0, 0, 0, 0};
-    float     GlyphSizeLogical{0.0f};
-    bool      Checked{false};
+    Render::Color ColorCheckMark{0, 0, 0, 0};
+    Render::Color ColorBoxChecked{0, 0, 0, 0};
+    float         GlyphSizeLogical{0.0f};
+    bool          Checked{false};
 
     std::function<void(bool)> OnChanged;
 
@@ -22,8 +22,8 @@ public:
     bool UpdateInteractionState(const Platform::InputState&) override;
 
 protected:
-    SDL_FPoint MeasureContent(SDL_FPoint AvailableContentSize) override;
-    void       DrawContent(Render::Renderer&, SDL_FRect ContentRect) override;
+    Point MeasureContent(Point AvailableContentSize) override;
+    void  DrawContent(Render::Renderer&, Rect ContentRect) override;
 
 private:
     bool PressedInside{false};

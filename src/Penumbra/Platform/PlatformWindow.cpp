@@ -5,6 +5,35 @@ namespace Penumbra::Platform {
 namespace {
 // SDL mouse buttons are 1-based (left=1, middle=2, right=3); InputState indexes 0-based.
 constexpr Uint32 ButtonMask[3] = {SDL_BUTTON_LMASK, SDL_BUTTON_MMASK, SDL_BUTTON_RMASK};
+
+// Maps SDL's keycode space onto Penumbra's small, deliberately incomplete Key
+// vocabulary (spec item 5) — only the keys Penumbra's own widgets and documented use
+// cases care about. Anything else comes through as Key::Unknown.
+Key MapKey(SDL_Keycode Code) {
+    switch (Code) {
+    case SDLK_LEFT:      return Key::Left;
+    case SDLK_RIGHT:     return Key::Right;
+    case SDLK_UP:        return Key::Up;
+    case SDLK_DOWN:      return Key::Down;
+    case SDLK_HOME:      return Key::Home;
+    case SDLK_END:       return Key::End;
+    case SDLK_BACKSPACE: return Key::Backspace;
+    case SDLK_DELETE:    return Key::Delete;
+    case SDLK_ESCAPE:    return Key::Escape;
+    case SDLK_RETURN:    return Key::Enter;
+    case SDLK_TAB:       return Key::Tab;
+    case SDLK_A:         return Key::A;
+    case SDLK_C:         return Key::C;
+    case SDLK_V:         return Key::V;
+    case SDLK_X:         return Key::X;
+    default:             return Key::Unknown;
+    }
+}
+
+Modifiers MapModifiers(SDL_Keymod Mod) {
+    return {(Mod & SDL_KMOD_SHIFT) != 0, (Mod & SDL_KMOD_CTRL) != 0,
+            (Mod & SDL_KMOD_ALT) != 0, (Mod & SDL_KMOD_GUI) != 0};
+}
 } // namespace
 
 bool PlatformWindow::Initialise(const char* Title, int LogicalWidth, int LogicalHeight) {
@@ -73,7 +102,7 @@ bool PlatformWindow::PumpEventsAndBuildInput(InputState& OutInputState) {
             OutInputState.TextInputThisFrame += Event.text.text;
             break;
         case SDL_EVENT_KEY_DOWN:
-            OutInputState.KeysPressedThisFrame.push_back(Event.key.key);
+            OutInputState.KeysPressedThisFrame.push_back(MapKey(Event.key.key));
             break;
         default:
             break;
@@ -96,12 +125,12 @@ bool PlatformWindow::PumpEventsAndBuildInput(InputState& OutInputState) {
         PreviousMouseButtonDown[Index] = Down;
     }
 
-    OutInputState.ModifierState = SDL_GetModState();
+    OutInputState.ModifierState = MapModifiers(SDL_GetModState());
 
     return KeepRunning;
 }
 
-SDL_FPoint PlatformWindow::GetLogicalWindowSize() const {
+Point PlatformWindow::GetLogicalWindowSize() const {
     int Width = 0;
     int Height = 0;
     if (Window) {
@@ -127,6 +156,14 @@ void PlatformWindow::SetTextInputActive(bool Active) {
 
 SDL_Renderer* PlatformWindow::GetSdlRenderer() const {
     return SdlRenderer;
+}
+
+void PlatformWindow::SetTitle(const std::string& Title) {
+    SDL_SetWindowTitle(Window, Title.c_str());
+}
+
+std::string PlatformWindow::GetLastError() const {
+    return SDL_GetError();
 }
 
 void PlatformWindow::SetClipboardText(const std::string& Text) {

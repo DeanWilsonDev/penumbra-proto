@@ -2,7 +2,7 @@
 
 namespace Penumbra::Widgets {
 
-SDL_FPoint Label::MeasureContent(SDL_FPoint /*AvailableContentSize*/) {
+Point Label::MeasureContent(Point /*AvailableContentSize*/) {
     if (!FontBackend) {
         return {0.0f, 0.0f};
     }
@@ -10,8 +10,8 @@ SDL_FPoint Label::MeasureContent(SDL_FPoint /*AvailableContentSize*/) {
     return {Metrics.WidthLogical, Metrics.HeightLogical};
 }
 
-void Label::DrawContent(Render::Renderer& Renderer, SDL_FRect ContentRect) {
-    Renderer.DrawText(Font, Text, {ContentRect.x, ContentRect.y}, ColorText);
+void Label::DrawContent(Render::Renderer& Renderer, Rect ContentRect) {
+    Renderer.DrawText(Font, Text, {ContentRect.X, ContentRect.Y}, ColorText);
 }
 
 } // namespace Penumbra::Widgets

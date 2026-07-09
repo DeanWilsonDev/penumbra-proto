@@ -12,9 +12,9 @@ namespace Penumbra::Widgets {
 class Button : public Box {
 public:
     // Extra state colours (the box-model + default background live in Box::Style).
-    SDL_Color ColorBackgroundHovered{0, 0, 0, 0};
-    SDL_Color ColorBackgroundPressed{0, 0, 0, 0};
-    SDL_Color ColorBackgroundDisabled{0, 0, 0, 0};
+    Render::Color ColorBackgroundHovered{0, 0, 0, 0};
+    Render::Color ColorBackgroundPressed{0, 0, 0, 0};
+    Render::Color ColorBackgroundDisabled{0, 0, 0, 0};
 
     std::function<void()> OnClicked;
 
@@ -33,10 +33,10 @@ public:
     InteractionState GetInteractionState() const { return CurrentState; }
 
 private:
-    SDL_Color BackgroundForState() const;
+    Render::Color BackgroundForState() const;
 
-    InteractionState   CurrentState{InteractionState::Default};
-    bool               PressedInside{false}; // a press began on this button and is held
+    InteractionState    CurrentState{InteractionState::Default};
+    bool                PressedInside{false}; // a press began on this button and is held
     Anim::AnimatedColor BackgroundAnim;       // eases toward the current state's colour
 };
 

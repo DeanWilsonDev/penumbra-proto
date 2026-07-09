@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Penumbra/Geometry.h"
 #include "Penumbra/Platform/IClipboard.h"
 #include "Penumbra/Platform/InputState.h"
 
@@ -21,11 +22,18 @@ public:
     // Returns false when the OS has asked the application to quit.
     bool PumpEventsAndBuildInput(InputState& OutInputState);
 
-    SDL_FPoint GetLogicalWindowSize() const;
-    float      GetDpiScaleFactor() const;
+    Point GetLogicalWindowSize() const;
+    float GetDpiScaleFactor() const;
 
     void          SetTextInputActive(bool Active);
     SDL_Renderer* GetSdlRenderer() const; // handed to the Render layer only
+
+    // Changes the window title after Initialise; Initialise only sets it once.
+    void SetTitle(const std::string& Title);
+
+    // The last platform error, so callers don't have to reach for SDL_GetError()
+    // themselves outside of Penumbra::Platform.
+    std::string GetLastError() const;
 
     void        SetClipboardText(const std::string& Text) override;
     std::string GetClipboardText() const override;

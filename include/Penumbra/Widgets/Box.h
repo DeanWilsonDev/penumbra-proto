@@ -20,22 +20,22 @@ public:
 
     WidgetBase* AddChild(std::unique_ptr<WidgetBase> Child);
 
-    SDL_FPoint Measure(SDL_FPoint AvailableSizeLogical) override;
-    void       Arrange(SDL_FRect FinalRectLogical) override;
-    bool       UpdateInteractionState(const Platform::InputState&) override;
-    void       Draw(Render::Renderer&) override;
+    Point Measure(Point AvailableSizeLogical) override;
+    void  Arrange(Rect FinalRectLogical) override;
+    bool  UpdateInteractionState(const Platform::InputState&) override;
+    void  Draw(Render::Renderer&) override;
 
     EdgeInsets GetMarginLogical() const override { return Style.Margin; }
 
 protected:
     // Subclasses override these for their own intrinsic visuals (text, glyphs).
-    virtual SDL_FPoint MeasureContent(SDL_FPoint AvailableContentSize) { return {0.0f, 0.0f}; }
-    virtual void       DrawContent(Render::Renderer&, SDL_FRect ContentRect) {}
+    virtual Point MeasureContent(Point AvailableContentSize) { return {0.0f, 0.0f}; }
+    virtual void  DrawContent(Render::Renderer&, Rect ContentRect) {}
 
     // The box-model overhead (border + padding) on each axis, and the content rect
     // an outer rect collapses to once border and padding are removed.
-    SDL_FPoint FrameSize() const;
-    SDL_FRect  ContentRectFrom(SDL_FRect OuterRect) const;
+    Point FrameSize() const;
+    Rect  ContentRectFrom(Rect OuterRect) const;
 };
 
 } // namespace Penumbra::Widgets

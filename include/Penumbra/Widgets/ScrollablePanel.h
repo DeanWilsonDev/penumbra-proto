@@ -15,10 +15,10 @@ public:
 
     float GetScrollOffset() const { return ScrollOffsetY; }
 
-    SDL_FPoint Measure(SDL_FPoint AvailableSizeLogical) override;
-    void       Arrange(SDL_FRect FinalRectLogical) override;
-    bool       UpdateInteractionState(const Platform::InputState&) override;
-    void       Draw(Render::Renderer&) override;
+    Point Measure(Point AvailableSizeLogical) override;
+    void  Arrange(Rect FinalRectLogical) override;
+    bool  UpdateInteractionState(const Platform::InputState&) override;
+    void  Draw(Render::Renderer&) override;
 
 private:
     float ScrollOffsetY{0.0f}; // how far the content is scrolled up, in logical px

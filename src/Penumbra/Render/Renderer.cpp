@@ -14,8 +14,12 @@ constexpr float Pi = 3.14159265358979323846f;
 // Width in physical pixels of the anti-aliasing fringe; it straddles the edge.
 constexpr float AaFeatherPhysical = 1.0f;
 
-SDL_FColor ToFColor(SDL_Color Color) {
-    return {Color.r / 255.0f, Color.g / 255.0f, Color.b / 255.0f, Color.a / 255.0f};
+SDL_Color ToSdlColor(Color InColor) {
+    return {InColor.R, InColor.G, InColor.B, InColor.A};
+}
+
+SDL_FColor ToFColor(Color InColor) {
+    return {InColor.R / 255.0f, InColor.G / 255.0f, InColor.B / 255.0f, InColor.A / 255.0f};
 }
 
 // More segments per corner as the radius grows, so small radii stay cheap and large
@@ -75,13 +79,13 @@ bool Renderer::Initialise(SDL_Renderer* InSdlRenderer, float InDpiScaleFactor,
     return true;
 }
 
-SDL_FRect Renderer::ToPhysical(SDL_FRect RectLogical) const {
-    return {RectLogical.x * DpiScaleFactor, RectLogical.y * DpiScaleFactor,
-            RectLogical.w * DpiScaleFactor, RectLogical.h * DpiScaleFactor};
+SDL_FRect Renderer::ToPhysical(Rect RectLogical) const {
+    return {RectLogical.X * DpiScaleFactor, RectLogical.Y * DpiScaleFactor,
+            RectLogical.W * DpiScaleFactor, RectLogical.H * DpiScaleFactor};
 }
 
-void Renderer::BeginFrame(SDL_Color ClearColor) {
-    SDL_SetRenderDrawColor(SdlRenderer, ClearColor.r, ClearColor.g, ClearColor.b, ClearColor.a);
+void Renderer::BeginFrame(Color ClearColor) {
+    SDL_SetRenderDrawColor(SdlRenderer, ClearColor.R, ClearColor.G, ClearColor.B, ClearColor.A);
     SDL_RenderClear(SdlRenderer);
 }
 
@@ -90,12 +94,12 @@ void Renderer::EndFrameAndPresent() {
     SDL_RenderPresent(SdlRenderer);
 }
 
-void Renderer::DrawFilledRect(SDL_FRect RectLogical, SDL_Color Color, float CornerRadiusLogical) {
+void Renderer::DrawFilledRect(Rect RectLogical, Color InColor, float CornerRadiusLogical) {
     const SDL_FRect R = ToPhysical(RectLogical);
     float Radius = CornerRadiusLogical * DpiScaleFactor;
 
     if (Radius <= 0.0f) {
-        SDL_SetRenderDrawColor(SdlRenderer, Color.r, Color.g, Color.b, Color.a);
+        SDL_SetRenderDrawColor(SdlRenderer, InColor.R, InColor.G, InColor.B, InColor.A);
         SDL_RenderFillRect(SdlRenderer, &R);
         return;
     }
@@ -106,7 +110,7 @@ void Renderer::DrawFilledRect(SDL_FRect RectLogical, SDL_Color Color, float Corn
     const int Count = static_cast<int>(Ring.Points.size());
     const float Half = AaFeatherPhysical * 0.5f;
 
-    const SDL_FColor Solid = ToFColor(Color);
+    const SDL_FColor Solid = ToFColor(InColor);
     SDL_FColor Clear = Solid;
     Clear.a = 0.0f;
 
@@ -142,14 +146,14 @@ void Renderer::DrawFilledRect(SDL_FRect RectLogical, SDL_Color Color, float Corn
                        Indices.data(), static_cast<int>(Indices.size()));
 }
 
-void Renderer::DrawRectOutline(SDL_FRect RectLogical, SDL_Color Color, float ThicknessLogical,
+void Renderer::DrawRectOutline(Rect RectLogical, Color InColor, float ThicknessLogical,
                                float CornerRadiusLogical) {
     const SDL_FRect R = ToPhysical(RectLogical);
     const float T = ThicknessLogical * DpiScaleFactor;
     float Radius = CornerRadiusLogical * DpiScaleFactor;
 
     if (Radius <= 0.0f) {
-        SDL_SetRenderDrawColor(SdlRenderer, Color.r, Color.g, Color.b, Color.a);
+        SDL_SetRenderDrawColor(SdlRenderer, InColor.R, InColor.G, InColor.B, InColor.A);
         const SDL_FRect Edges[4] = {
             {R.x,           R.y,           R.w, T  }, // top
             {R.x,           R.y + R.h - T, R.w, T  }, // bottom
@@ -167,7 +171,7 @@ void Renderer::DrawRectOutline(SDL_FRect RectLogical, SDL_Color Color, float Thi
     // A border thicker than the box collapses to a solid rounded fill.
     const SDL_FRect Inner{R.x + T, R.y + T, R.w - 2.0f * T, R.h - 2.0f * T};
     if (Inner.w <= 0.0f || Inner.h <= 0.0f) {
-        DrawFilledRect(RectLogical, Color, CornerRadiusLogical);
+        DrawFilledRect(RectLogical, InColor, CornerRadiusLogical);
         return;
     }
 
@@ -180,7 +184,7 @@ void Renderer::DrawRectOutline(SDL_FRect RectLogical, SDL_Color Color, float Thi
     const int Count = static_cast<int>(Outer.Points.size());
     const float Half = AaFeatherPhysical * 0.5f;
 
-    const SDL_FColor Solid = ToFColor(Color);
+    const SDL_FColor Solid = ToFColor(InColor);
     SDL_FColor Clear = Solid;
     Clear.a = 0.0f;
 
@@ -219,13 +223,13 @@ void Renderer::DrawRectOutline(SDL_FRect RectLogical, SDL_Color Color, float Thi
                        Indices.data(), static_cast<int>(Indices.size()));
 }
 
-void Renderer::DrawText(FontHandle Font, std::string_view Text, SDL_FPoint PositionLogical,
-                        SDL_Color Color) {
+void Renderer::DrawText(FontHandle Font, std::string_view Text, Point PositionLogical,
+                        Color InColor) {
     if (!FontBackend || Text.empty()) {
         return;
     }
 
-    SDL_Texture* Texture = FontBackend->AcquireTextTexture(SdlRenderer, Font, Text, Color);
+    SDL_Texture* Texture = FontBackend->AcquireTextTexture(SdlRenderer, Font, Text, ToSdlColor(InColor));
     if (!Texture) {
         return;
     }
@@ -235,8 +239,8 @@ void Renderer::DrawText(FontHandle Font, std::string_view Text, SDL_FPoint Posit
     float TextureHeight = 0.0f;
     SDL_GetTextureSize(Texture, &TextureWidth, &TextureHeight);
 
-    const SDL_FRect Destination{PositionLogical.x * DpiScaleFactor,
-                                PositionLogical.y * DpiScaleFactor, TextureWidth, TextureHeight};
+    const SDL_FRect Destination{PositionLogical.X * DpiScaleFactor,
+                                PositionLogical.Y * DpiScaleFactor, TextureWidth, TextureHeight};
     SDL_RenderTexture(SdlRenderer, Texture, nullptr, &Destination);
 }
 
@@ -244,7 +248,7 @@ SDL_Renderer* Renderer::GetSdlRenderer() const {
     return SdlRenderer;
 }
 
-void Renderer::DrawTexture(SDL_Texture* Texture, SDL_FRect DestLogical) {
+void Renderer::DrawTexture(SDL_Texture* Texture, Rect DestLogical) {
     if (!Texture) {
         return;
     }
@@ -254,7 +258,7 @@ void Renderer::DrawTexture(SDL_Texture* Texture, SDL_FRect DestLogical) {
     SDL_RenderTexture(SdlRenderer, Texture, nullptr, &Destination);
 }
 
-void Renderer::PushClipRect(SDL_FRect RectLogical) {
+void Renderer::PushClipRect(Rect RectLogical) {
     const SDL_FRect P = ToPhysical(RectLogical);
     SDL_Rect Requested{static_cast<int>(std::lround(P.x)), static_cast<int>(std::lround(P.y)),
                        static_cast<int>(std::lround(P.w)), static_cast<int>(std::lround(P.h))};

@@ -3,9 +3,9 @@
 namespace Penumbra::Widgets {
 
 namespace {
-bool PointInRect(SDL_FPoint Point, SDL_FRect Rect) {
-    return Point.x >= Rect.x && Point.x < Rect.x + Rect.w &&
-           Point.y >= Rect.y && Point.y < Rect.y + Rect.h;
+bool PointInRect(Point Point, Rect Rect) {
+    return Point.X >= Rect.X && Point.X < Rect.X + Rect.W &&
+           Point.Y >= Rect.Y && Point.Y < Rect.Y + Rect.H;
 }
 constexpr int LeftButton = 0;
 } // namespace
@@ -62,7 +62,7 @@ bool Button::UpdateInteractionState(const Platform::InputState& Input) {
     return Consumed;
 }
 
-SDL_Color Button::BackgroundForState() const {
+Render::Color Button::BackgroundForState() const {
     switch (CurrentState) {
     case InteractionState::Hovered:  return ColorBackgroundHovered;
     case InteractionState::Pressed:  return ColorBackgroundPressed;
@@ -74,8 +74,8 @@ SDL_Color Button::BackgroundForState() const {
 
 void Button::Draw(Render::Renderer& Renderer) {
     // Swap in the eased state background, reuse Box's drawing, then restore.
-    const SDL_Color Chosen = BackgroundAnim.Initialised ? BackgroundAnim.Value() : BackgroundForState();
-    const SDL_Color Saved = Style.ColorBackground;
+    const Render::Color Chosen = BackgroundAnim.Initialised ? BackgroundAnim.Value() : BackgroundForState();
+    const Render::Color Saved = Style.ColorBackground;
     Style.ColorBackground = Chosen;
     Box::Draw(Renderer);
     Style.ColorBackground = Saved;
