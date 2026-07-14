@@ -4,11 +4,12 @@
 > UI compiler/runtime planned as a separate project — see `docs/iris_handoff.md`). Purely
 > about whether Penumbra's widget-tree API is sufficient for a reconciler to drive it; no
 > visual, layout, or styling changes proposed here.
-> **Status:** Items 1–3 (child removal/replacement/clear, reordering, uniform child
-> enumeration) are implemented — see `Box::RemoveChild`/`ReplaceChild`/`ClearChildren`/
-> `MoveChild`/`InsertChildAt` and `WidgetBase::GetChildCount`/`GetChildAt` (overridden by
-> `Box` and `SplitPanel`). Landed ahead of Iris's reactive runtime existing, since the API
-> is generically useful (see §6) independent of Iris's own timeline.
+> **Status:** All REQUIRED items (1, 2, 3, 4) are implemented — see `Box::RemoveChild`/
+> `ReplaceChild`/`ClearChildren`/`MoveChild`/`InsertChildAt`, `WidgetBase::GetChildCount`/
+> `GetChildAt` (overridden by `Box` and `SplitPanel`), and `WidgetBase::OnPressed`/
+> `OnReleased`/`OnHovered`/`OnFocused`/`OnChanged` (dispatched by `Box::UpdateInteractionState`
+> when set). Landed ahead of Iris's reactive runtime existing, since the API is generically
+> useful (see §6) independent of Iris's own timeline.
 
 ---
 
@@ -75,7 +76,46 @@ Storage doesn't need to unify — just the read contract.
 
 ---
 
-## 4. Minor — no identity/`key` concept needed in Penumbra itself
+## 4. REQUIRED — input callbacks on `WidgetBase`
+
+Added after the rest of this doc was written, from the Iris Stage 0/1 planning
+conversations: Iris's interactivity model allows event props (`onPress`, `onRelease`,
+`onHover`, `onFocus`, `onChange`) on any element, not just widgets with their own
+dedicated callback (`Button::OnClicked`, `Checkbox::OnChanged`). A `<Frame onPress={...}>`
+needs a plain `Box` to be capable of firing a callback — previously only possible by
+subclassing.
+
+### Implemented API
+
+```cpp
+// include/Penumbra/Widgets/WidgetBase.h
+std::function<void()> OnPressed  = nullptr;
+std::function<void()> OnReleased = nullptr;
+std::function<void()> OnHovered  = nullptr;
+std::function<void()> OnFocused  = nullptr;
+std::function<void()> OnChanged  = nullptr;
+```
+
+All null by default — a widget with none set is exactly as inert as before this existed.
+`Box::UpdateInteractionState` dispatches `OnPressed`/`OnReleased`/`OnHovered` once child
+first-refusal has passed, and skips its own hit-test entirely when none of the five are
+set (the "no unnecessary hit-testing on inert widgets" requirement). `OnReleased` pairs
+with the `OnPressed` that started the press (tracked via a private `PressedInside` flag on
+`Box`, the same idiom `Button`/`Checkbox` already use for their own typed callbacks), so it
+fires correctly even if the pointer drags outside the widget before releasing.
+
+`OnFocused` and `OnChanged` are declared but not yet dispatched by anything — Penumbra has
+no generic focus concept today (only `TextInput` participates in focus, via its own
+injected `FocusState*`), and no generic "value" concept either. Wiring those two is
+deferred until a concrete consumer needs them; declaring them now means the member layout
+doesn't change out from under Iris later.
+
+Existing typed callbacks (`Button::OnClicked`, `Checkbox::OnChanged`, `TextInput::OnTextChanged`)
+are untouched — this is purely additive for widgets that don't already have one.
+
+---
+
+## 5. Minor — no identity/`key` concept needed in Penumbra itself
 
 Noting for completeness: matching new elements to existing widget instances across
 re-renders (React's `key` pattern) is naturally owned by the Iris runtime — an
@@ -84,10 +124,10 @@ return. Penumbra doesn't need any identity concept of its own.
 
 ---
 
-## 5. Explicitly not requested
+## 6. Explicitly not requested
 
-- No changes to `Measure`/`Arrange`/`Draw`/`UpdateInteractionState`, the layout model, style
-  structs, or the render primitive set — this is entirely about tree *mutation* shape, not
+- No changes to `Measure`/`Arrange`/`Draw`, the layout model, style structs, or the render
+  primitive set — this is entirely about tree *mutation* shape and input dispatch, not
   rendering or layout.
 - No built-in signals/observables inside Penumbra — the reactive model belongs in Iris's
   runtime; Penumbra stays an imperative, opinion-free tree, consistent with its existing
@@ -95,7 +135,7 @@ return. Penumbra doesn't need any identity concept of its own.
 
 ---
 
-## 6. What unblocks when this lands
+## 7. What unblocks when this lands
 
 Penumbra becomes usable as the target of a real diff/patch-style renderer instead of only
 supporting build-once-and-mutate-fields-in-place trees. Item 3 also benefits any future

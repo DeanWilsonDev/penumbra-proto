@@ -6,6 +6,7 @@
 #include "Penumbra/Widgets/Styles.h"
 
 #include <cstddef>
+#include <functional>
 
 namespace Penumbra::Widgets {
 
@@ -37,6 +38,18 @@ public:
     // children report zero — the default — rather than every leaf overriding it.
     virtual std::size_t GetChildCount() const { return 0; }
     virtual WidgetBase* GetChildAt(std::size_t Index) const { return nullptr; }
+
+    // Generic pointer/focus/value callbacks any widget can opt into — this is what
+    // lets a plain Box act as an interactive Iris <Frame onPress=.../>, not just
+    // dedicated subclasses like Button/Checkbox with their own typed callbacks. All
+    // null by default: a widget with none set is exactly as inert as before this
+    // existed, and dispatch skips hit-testing entirely rather than paying for it
+    // (see Box::UpdateInteractionState).
+    std::function<void()> OnPressed  = nullptr;
+    std::function<void()> OnReleased = nullptr;
+    std::function<void()> OnHovered  = nullptr;
+    std::function<void()> OnFocused  = nullptr;
+    std::function<void()> OnChanged  = nullptr;
 
     void SetIsEnabled(bool Enabled) { IsEnabled = Enabled; }
     bool GetIsEnabled() const { return IsEnabled; }

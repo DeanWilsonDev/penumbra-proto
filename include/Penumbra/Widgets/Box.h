@@ -55,6 +55,11 @@ protected:
     // an outer rect collapses to once border and padding are removed.
     Point FrameSize() const;
     Rect  ContentRectFrom(Rect OuterRect) const;
+
+private:
+    // Tracks whether a press began inside this Box, so OnReleased pairs with the
+    // OnPressed that started it rather than firing on an unrelated mouse-up.
+    bool PressedInside{false};
 };
 
 } // namespace Penumbra::Widgets

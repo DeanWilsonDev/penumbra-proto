@@ -7,6 +7,12 @@ namespace Penumbra::Widgets {
 
 namespace {
 float NonNegative(float Value) { return Value > 0.0f ? Value : 0.0f; }
+
+bool PointInRect(Point Point, Rect Rect) {
+    return Point.X >= Rect.X && Point.X < Rect.X + Rect.W &&
+           Point.Y >= Rect.Y && Point.Y < Rect.Y + Rect.H;
+}
+constexpr int LeftButton = 0;
 } // namespace
 
 WidgetBase* Box::AddChild(std::unique_ptr<WidgetBase> Child) {
@@ -191,7 +197,37 @@ bool Box::UpdateInteractionState(const Platform::InputState& Input) {
             return true;
         }
     }
-    return false;
+
+    // A Box with none of the generic callbacks set is an inert layout container —
+    // exactly as before this API existed — so skip hit-testing it rather than
+    // paying for a PointInRect check on every plain Box in the tree, every frame.
+    if (!IsEnabled || !(OnPressed || OnReleased || OnHovered || OnFocused || OnChanged)) {
+        PressedInside = false;
+        return false;
+    }
+
+    const bool Hovered  = PointInRect(Input.MousePosition, ArrangedRect);
+    const bool Pressed  = Input.MouseButtonPressedThisFrame[LeftButton];
+    const bool Down     = Input.MouseButtonDown[LeftButton];
+    const bool Released = Input.MouseButtonReleasedThisFrame[LeftButton];
+
+    if (Hovered && OnHovered) {
+        OnHovered();
+    }
+    if (Pressed && Hovered) {
+        PressedInside = true;
+        if (OnPressed) {
+            OnPressed();
+        }
+    }
+    if (Released) {
+        if (PressedInside && OnReleased) {
+            OnReleased();
+        }
+        PressedInside = false;
+    }
+
+    return Hovered || (PressedInside && Down);
 }
 
 void Box::Draw(Render::Renderer& Renderer) {
