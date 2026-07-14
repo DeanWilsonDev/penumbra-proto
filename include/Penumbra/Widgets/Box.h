@@ -2,7 +2,9 @@
 
 #include "Penumbra/Widgets/WidgetBase.h"
 
+#include <functional>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace Penumbra::Widgets {
@@ -45,6 +47,32 @@ public:
 
     std::size_t GetChildCount() const override { return Children.size(); }
     WidgetBase* GetChildAt(std::size_t Index) const override { return Children[Index].get(); }
+
+    // Fluent, chainable construction for Iris's Penumbra backend codegen: method
+    // names match Iris prop names exactly (the Iris preprocessor does a
+    // mechanical prop-name -> builder-method-name translation), except
+    // className() — class is a reserved word, so Iris's codegen maps its
+    // `class` prop to this name specifically; there is no other divergence.
+    // Owns the widget being built until build() transfers it out; not meant to
+    // outlive that call.
+    class Builder {
+    public:
+        Builder();
+
+        Builder& className(std::string Value);
+        Builder& child(std::unique_ptr<WidgetBase> Child);
+        Builder& children(std::vector<std::unique_ptr<WidgetBase>> Kids);
+        Builder& onPress(std::function<void()> Handler);
+        Builder& onRelease(std::function<void()> Handler);
+        Builder& onHover(std::function<void()> Handler);
+        Builder& onFocus(std::function<void()> Handler);
+        Builder& onChange(std::function<void()> Handler);
+
+        std::unique_ptr<Box> build();
+
+    private:
+        std::unique_ptr<Box> Owned;
+    };
 
 protected:
     // Subclasses override these for their own intrinsic visuals (text, glyphs).

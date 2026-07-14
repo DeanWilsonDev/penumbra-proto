@@ -248,4 +248,50 @@ void Box::Draw(Render::Renderer& Renderer) {
     }
 }
 
+Box::Builder::Builder() : Owned(std::make_unique<Box>()) {}
+
+Box::Builder& Box::Builder::className(std::string Value) {
+    Owned->ClassName = std::move(Value);
+    return *this;
+}
+
+Box::Builder& Box::Builder::child(std::unique_ptr<WidgetBase> Child) {
+    Owned->AddChild(std::move(Child));
+    return *this;
+}
+
+Box::Builder& Box::Builder::children(std::vector<std::unique_ptr<WidgetBase>> Kids) {
+    for (auto& Kid : Kids) {
+        Owned->AddChild(std::move(Kid));
+    }
+    return *this;
+}
+
+Box::Builder& Box::Builder::onPress(std::function<void()> Handler) {
+    Owned->OnPressed = std::move(Handler);
+    return *this;
+}
+
+Box::Builder& Box::Builder::onRelease(std::function<void()> Handler) {
+    Owned->OnReleased = std::move(Handler);
+    return *this;
+}
+
+Box::Builder& Box::Builder::onHover(std::function<void()> Handler) {
+    Owned->OnHovered = std::move(Handler);
+    return *this;
+}
+
+Box::Builder& Box::Builder::onFocus(std::function<void()> Handler) {
+    Owned->OnFocused = std::move(Handler);
+    return *this;
+}
+
+Box::Builder& Box::Builder::onChange(std::function<void()> Handler) {
+    Owned->OnChanged = std::move(Handler);
+    return *this;
+}
+
+std::unique_ptr<Box> Box::Builder::build() { return std::move(Owned); }
+
 } // namespace Penumbra::Widgets

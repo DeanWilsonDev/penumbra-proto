@@ -131,4 +131,51 @@ void InlineContainer::Arrange(Rect FinalRectLogical) {
     }
 }
 
+InlineContainer::Builder::Builder() : Owned(std::make_unique<InlineContainer>()) {}
+
+InlineContainer::Builder& InlineContainer::Builder::className(std::string Value) {
+    Owned->ClassName = std::move(Value);
+    return *this;
+}
+
+InlineContainer::Builder& InlineContainer::Builder::child(std::unique_ptr<WidgetBase> Child) {
+    Owned->AddChild(std::move(Child));
+    return *this;
+}
+
+InlineContainer::Builder&
+InlineContainer::Builder::children(std::vector<std::unique_ptr<WidgetBase>> Kids) {
+    for (auto& Kid : Kids) {
+        Owned->AddChild(std::move(Kid));
+    }
+    return *this;
+}
+
+InlineContainer::Builder& InlineContainer::Builder::onPress(std::function<void()> Handler) {
+    Owned->OnPressed = std::move(Handler);
+    return *this;
+}
+
+InlineContainer::Builder& InlineContainer::Builder::onRelease(std::function<void()> Handler) {
+    Owned->OnReleased = std::move(Handler);
+    return *this;
+}
+
+InlineContainer::Builder& InlineContainer::Builder::onHover(std::function<void()> Handler) {
+    Owned->OnHovered = std::move(Handler);
+    return *this;
+}
+
+InlineContainer::Builder& InlineContainer::Builder::onFocus(std::function<void()> Handler) {
+    Owned->OnFocused = std::move(Handler);
+    return *this;
+}
+
+InlineContainer::Builder& InlineContainer::Builder::onChange(std::function<void()> Handler) {
+    Owned->OnChanged = std::move(Handler);
+    return *this;
+}
+
+std::unique_ptr<InlineContainer> InlineContainer::Builder::build() { return std::move(Owned); }
+
 } // namespace Penumbra::Widgets

@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include <functional>
+#include <string>
 
 namespace Penumbra::Widgets {
 
@@ -50,6 +51,12 @@ public:
     std::function<void()> OnHovered  = nullptr;
     std::function<void()> OnFocused  = nullptr;
     std::function<void()> OnChanged  = nullptr;
+
+    // Inert storage for Iris's `class` prop (its Lustre-lite class-selector
+    // resolution isn't designed yet — see docs/iris_handoff.md §7). Penumbra
+    // holds the string and does nothing with it, consistent with "no defaults,
+    // no opinions": styling by class name is entirely a future Iris concern.
+    std::string ClassName;
 
     void SetIsEnabled(bool Enabled) { IsEnabled = Enabled; }
     bool GetIsEnabled() const { return IsEnabled; }
