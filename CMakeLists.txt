@@ -22,6 +22,7 @@ find_package(SDL3_image CONFIG REQUIRED)
 # Penumbra — static library. Nothing in here references demo/.
 # ---------------------------------------------------------------------------
 add_library(penumbra STATIC
+    src/Penumbra/Application.cpp
     src/Penumbra/Platform/PlatformWindow.cpp
     src/Penumbra/Render/Renderer.cpp
     src/Penumbra/Render/SdlTtfFontBackend.cpp
