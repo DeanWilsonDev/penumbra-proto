@@ -25,6 +25,16 @@ struct BoxStyle {
     float         BorderRadius{0.0f}; // honoured by API; rendered square in first cut
     EdgeInsets    Padding{0.0f, 0.0f, 0.0f, 0.0f}; // inside the border  — the box's own job
     EdgeInsets    Margin{0.0f, 0.0f, 0.0f, 0.0f};  // outside the border — the PARENT's job
+
+    // A top-to-bottom two-stop gradient fill, drawn via Renderer::DrawGradientRect
+    // instead of the flat ColorBackground fill above when GradientTop.A != 0 (docs/
+    // penumbra_iris_lustre_componentization_gaps_requirements.md §2 -- Lustre's
+    // `background-gradient-start`/`-end`). Zero-alpha (the default) means "no
+    // gradient, use ColorBackground" -- the same "alpha is the presence flag"
+    // convention ColorBackground/ColorBorder above already use, so a Box with
+    // neither set still draws nothing extra.
+    Render::Color GradientTop{0, 0, 0, 0};
+    Render::Color GradientBottom{0, 0, 0, 0};
 };
 
 // Per-widget styles extend BoxStyle so the box-model slots stay universal and free.
