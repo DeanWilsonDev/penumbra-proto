@@ -30,6 +30,7 @@ add_library(penumbra STATIC
     src/Penumbra/Widgets/Box.cpp
     src/Penumbra/Widgets/InlineContainer.cpp
     src/Penumbra/Widgets/ImageWidget.cpp
+    src/Penumbra/Widgets/IconWidget.cpp
     src/Penumbra/Widgets/Button.cpp
     src/Penumbra/Widgets/ScrollablePanel.cpp
     src/Penumbra/Widgets/Label.cpp
