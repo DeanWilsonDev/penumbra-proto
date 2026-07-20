@@ -27,18 +27,24 @@ Point ScrollablePanel::Measure(Point AvailableSizeLogical) {
 
     float Total = 0.0f;
     float MaxWidth = 0.0f;
+    bool  AnyVisible = false;
     for (std::size_t Index = 0; Index < Children.size(); ++Index) {
         WidgetBase* Child = Children[Index].get();
+        if (!Child->GetIsVisible()) {
+            continue; // absent, not zero-sized-but-present: no gap counted either -- same
+                      // contract Box::MeasureChildren already gives its own children.
+        }
         const EdgeInsets Margin = Child->GetMarginLogical();
         const Point ChildAvailable{NonNegative(ContentAvailable.X - Margin.Left - Margin.Right),
                                    NonNegative(ContentAvailable.Y - Margin.Top - Margin.Bottom)};
         const Point Desired = Child->Measure(ChildAvailable);
 
-        if (Index > 0) {
+        if (AnyVisible) {
             Total += ChildGap;
         }
         Total += Desired.Y + Margin.Top + Margin.Bottom;
         MaxWidth = std::max(MaxWidth, Desired.X + Margin.Left + Margin.Right);
+        AnyVisible = true;
     }
 
     ContentHeight = Total;
@@ -58,8 +64,13 @@ void ScrollablePanel::Arrange(Rect FinalRectLogical) {
     // Positions may fall outside the viewport; the clip in Draw hides them.
     float CursorY = Content.Y - ScrollOffsetY;
     const std::size_t Count = Children.size();
+    bool  AnyVisible = false;
     for (std::size_t Index = 0; Index < Count; ++Index) {
         WidgetBase* Child = Children[Index].get();
+        if (!Child->GetIsVisible()) {
+            continue; // not arranged: an un-arranged widget keeps its last ArrangedRect --
+                      // same contract Box::Arrange already gives its own children.
+        }
         const EdgeInsets Margin = Child->GetMarginLogical();
 
         const Point ChildAvailable{NonNegative(Content.W - Margin.Left - Margin.Right),
@@ -83,13 +94,15 @@ void ScrollablePanel::Arrange(Rect FinalRectLogical) {
             break;
         }
 
+        if (AnyVisible) {
+            CursorY += ChildGap;
+        }
+
         const float ChildY = CursorY + Margin.Top;
         Child->Arrange({ChildX, ChildY, ChildWidth, Desired.Y});
 
         CursorY = ChildY + Desired.Y + Margin.Bottom;
-        if (Index + 1 < Count) {
-            CursorY += ChildGap;
-        }
+        AnyVisible = true;
     }
 }
 
@@ -105,6 +118,10 @@ bool ScrollablePanel::UpdateInteractionState(const Platform::InputState& Input) 
     bool Consumed = false;
     if (PointInRect(Input.MousePosition, Content)) {
         for (auto Iterator = Children.rbegin(); Iterator != Children.rend(); ++Iterator) {
+            if (!(*Iterator)->GetIsVisible()) {
+                continue; // a hidden subtree can't consume input -- same contract
+                          // Box::UpdateInteractionState already gives its own children.
+            }
             if ((*Iterator)->UpdateInteractionState(Input)) {
                 Consumed = true;
                 break;
@@ -133,6 +150,9 @@ void ScrollablePanel::Draw(Render::Renderer& Renderer) {
     const Rect Content = ContentRectFrom(ArrangedRect);
     Renderer.PushClipRect(Content);
     for (auto& Child : Children) {
+        if (!Child->GetIsVisible()) {
+            continue; // same contract Box::Draw already gives its own children.
+        }
         Child->Draw(Renderer);
     }
     Renderer.PopClipRect();
