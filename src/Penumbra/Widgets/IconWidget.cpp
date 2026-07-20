@@ -61,6 +61,11 @@ IconWidget::Builder& IconWidget::Builder::icon(std::string Value) {
     return *this;
 }
 
+IconWidget::Builder& IconWidget::Builder::size(float Value) {
+    Owned->SizeLogical = Value;
+    return *this;
+}
+
 IconWidget::Builder& IconWidget::Builder::className(std::string Value) {
     Owned->ClassName = std::move(Value);
     return *this;

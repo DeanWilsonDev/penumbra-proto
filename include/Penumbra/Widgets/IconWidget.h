@@ -33,14 +33,17 @@ public:
     void  Draw(Render::Renderer&) override;
 
     // Fluent, chainable construction — see ImageWidget::Builder for the naming-
-    // convention rationale. Deliberately narrow: just icon() (Iris <Icon>'s content
-    // prop) and className() — no child()/children() (a leaf) and no onPress()/etc,
+    // convention rationale. Deliberately narrow: icon()/size() (Iris <Icon>'s own
+    // props) and className() — no child()/children() (a leaf) and no onPress()/etc,
     // matching <Icon>'s own prop list in docs/iris_core_spec.md §3.1.
     class Builder {
     public:
         Builder();
 
         Builder& icon(std::string Value);
+        // Overrides SizeLogical's 16px default -- <Icon size={...}> (docs/
+        // iris_core_spec.md §3.1), unset means "use the default".
+        Builder& size(float Value);
         Builder& className(std::string Value);
 
         std::unique_ptr<IconWidget> build();
