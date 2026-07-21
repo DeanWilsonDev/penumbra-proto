@@ -103,8 +103,21 @@ Rect Box::ContentRectFrom(Rect OuterRect) const {
 
 Point Box::Measure(Point AvailableSizeLogical) {
     const Point Frame = FrameSize();
-    const Point ContentAvailable{NonNegative(AvailableSizeLogical.X - Frame.X),
-                                 NonNegative(AvailableSizeLogical.Y - Frame.Y)};
+
+    // Style.WidthLogical/HeightLogical (>= 0) override the border-box size this Box
+    // measures against and reports upward -- a fixed-width container constrains its
+    // own children to its own width, not whatever the parent happened to offer,
+    // matching CSS. -1 ("auto", the default) leaves AvailableSizeLogical untouched.
+    Point EffectiveAvailable = AvailableSizeLogical;
+    if (Style.WidthLogical >= 0.0f) {
+        EffectiveAvailable.X = Style.WidthLogical;
+    }
+    if (Style.HeightLogical >= 0.0f) {
+        EffectiveAvailable.Y = Style.HeightLogical;
+    }
+
+    const Point ContentAvailable{NonNegative(EffectiveAvailable.X - Frame.X),
+                                 NonNegative(EffectiveAvailable.Y - Frame.Y)};
 
     Point ContentDesired{0.0f, 0.0f};
 
@@ -143,7 +156,14 @@ Point Box::Measure(Point AvailableSizeLogical) {
         ContentDesired = Vertical ? Point{CrossMax, MainTotal} : Point{MainTotal, CrossMax};
     }
 
-    return {ContentDesired.X + Frame.X, ContentDesired.Y + Frame.Y};
+    Point Desired{ContentDesired.X + Frame.X, ContentDesired.Y + Frame.Y};
+    if (Style.WidthLogical >= 0.0f) {
+        Desired.X = Style.WidthLogical;
+    }
+    if (Style.HeightLogical >= 0.0f) {
+        Desired.Y = Style.HeightLogical;
+    }
+    return Desired;
 }
 
 void Box::Arrange(Rect FinalRectLogical) {

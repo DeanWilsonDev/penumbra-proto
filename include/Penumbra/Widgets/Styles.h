@@ -58,6 +58,21 @@ struct BoxStyle {
     // resolver-side concern once the primitive exists, not something Penumbra itself
     // needs to track multiple copies of.
     Penumbra::Transform Transform{};
+
+    // An explicit border-box size override, distinct from Measure's usual
+    // content-driven sizing (docs/lustre_style_gaps_requirements.md #3 -- Lustre's
+    // width/height properties). -1 (the default, "auto") means Measure falls through
+    // to its normal intrinsic calculation; a value >= 0 is "be exactly this many
+    // logical pixels", Padding/BorderWidth included -- the same total Arrange would
+    // otherwise have derived from content. Negative rather than a zero/sentinel-alpha
+    // convention because 0 is itself a legitimate explicit size (a collapsed spacer).
+    // Only the MAIN axis of a Layout::VerticalStack/HorizontalStack parent is
+    // guaranteed to honour this on a child -- CrossAlign::Stretch still overrides the
+    // CROSS axis unconditionally, the same way it already overrides intrinsic cross
+    // sizing today; reconciling explicit-size-wins-over-Stretch is a follow-up, not
+    // part of this primitive.
+    float WidthLogical{-1.0f};
+    float HeightLogical{-1.0f};
 };
 
 // Per-widget styles extend BoxStyle so the box-model slots stay universal and free.

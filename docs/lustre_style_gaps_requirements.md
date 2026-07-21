@@ -74,7 +74,7 @@ doesn't compile to anything real right now.
 > tracks the visual position. The common (untransformed) path pays nothing extra -- no
 > `InputState` copy, no trig -- since `Transform::IsIdentity()` short-circuits before either.
 
-## 3. No fixed-size (width/height) override anywhere
+## 3. No fixed-size (width/height) override anywhere — DONE
 
 `WidgetBase`/`Box`/`Label` size themselves entirely intrinsically — `Measure`/`Arrange` derive
 size from content plus `BoxStyle::Padding`, with no field anywhere to say "be exactly 200
@@ -89,6 +89,31 @@ An explicit-size-override concept distinct from intrinsic `Measure` — e.g. opt
 `Measure` consults before falling through to content-driven sizing. Not proposing exact field
 names here; this needs its own design pass alongside whatever `<Grid>`'s real layout mode ends
 up needing (`iris_core_spec.md` §9's own open gap), since both touch `Measure`/`Arrange`.
+
+> Implemented: `BoxStyle::WidthLogical`/`HeightLogical` (`-1`, "auto", the default; a value
+> `>= 0` is the exact border-box size, `Padding`/`BorderWidth` included). `Box::Measure`
+> consults them twice -- once to override what it hands its own content/children as available
+> space (a fixed-width container constrains its children to its own width, not whatever the
+> parent offered, matching CSS), and once to override what it reports upward regardless of
+> what that content-driven calculation produced. `<Grid>` is still just a stub (`Box` with
+> `LayoutMode::HorizontalStack`, per `iris_core_spec.md` §3.1/§8) with no real layout mode of
+> its own yet, so there was nothing concrete to design alongside; nothing here is Grid-specific
+> and revisiting it if/when Grid gets real layout is a follow-up, not a blocker.
+>
+> Scope: only `Box::Measure` consults these fields, which is also every widget that reuses it
+> unchanged (`Button`, `Checkbox`, `Label`, `TextInput`, `NumericDrag` -- exactly the
+> `WidgetBase`/`Box`/`Label` scope this item named). Widgets with their own bespoke `Measure`
+> override (`IconWidget`, `ImageWidget`, `ViewportWidget`, `InlineContainer`,
+> `ScrollablePanel`, `SplitPanel`) don't consult it -- each has its own sizing semantics
+> (glyph size, aspect ratio, scroll content, split ratio) that a generic override wasn't asked
+> to touch.
+>
+> Known interaction, not fully reconciled: on the layout MAIN axis (a `VerticalStack`'s height,
+> a `HorizontalStack`'s width) a fixed size always wins, since it's baked into what `Measure`
+> reports and the stack just sums those. On the CROSS axis, `CrossAlign::Stretch` still
+> overrides an explicit size unconditionally, the same way it already overrode intrinsic
+> sizing before this existed -- real flexbox reconciles `align-self`/explicit-size precedence
+> more carefully; doing the same here is a follow-up, not part of this primitive.
 
 ## 4. Not a gap, confirmed working as-is
 
