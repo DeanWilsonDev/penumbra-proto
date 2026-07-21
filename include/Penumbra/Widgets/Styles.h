@@ -37,6 +37,23 @@ struct BoxStyle {
     Render::Color GradientTop{0, 0, 0, 0};
     Render::Color GradientBottom{0, 0, 0, 0};
 
+    // Per-state gradient overrides, same presence-flag convention as GradientTop/
+    // ColorBackgroundHovered above (alpha 0 = "no override, use GradientTop/
+    // GradientBottom"). No Disabled variant -- every known consumer falls back to
+    // a flat ColorBackgroundDisabled fill when disabled, not a disabled-state
+    // gradient.
+    Render::Color GradientTopHovered{0, 0, 0, 0};
+    Render::Color GradientBottomHovered{0, 0, 0, 0};
+    Render::Color GradientTopPressed{0, 0, 0, 0};
+    Render::Color GradientBottomPressed{0, 0, 0, 0};
+
+    // A soft rectangular shadow drawn just before this Box's own background/
+    // gradient fill, mirroring Renderer::DrawDropShadow's two-argument shape
+    // (Render/Renderer.h:80-81). 0 blur radius (the default) draws no shadow --
+    // same presence-flag convention as everything else in this struct.
+    Render::Color ShadowColor{0, 0, 0, 0};
+    float         ShadowBlurRadiusLogical{0.0f};
+
     // Interaction-state background overrides -- universal (not Button-only) so
     // Lustre's :hover/:active/:disabled selectors have somewhere to land on any
     // classed element, matching how OnPressed/OnHovered/etc. on WidgetBase already

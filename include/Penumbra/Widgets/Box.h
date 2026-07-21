@@ -95,6 +95,13 @@ private:
     // transparent on hover (docs/lustre_style_gaps_requirements.md #1).
     Render::Color BackgroundForState() const;
 
+    // The gradient stops Draw should use for CurrentState -- Style.GradientTopHovered/
+    // Pressed (resp. Bottom) when set (non-zero alpha), else Style.GradientTop/
+    // GradientBottom unchanged. Mirrors BackgroundForState's fallback convention;
+    // no Disabled case, per BoxStyle's own comment on the Hovered/Pressed fields.
+    Render::Color GradientTopForState() const;
+    Render::Color GradientBottomForState() const;
+
     // Tracks whether a press began inside this Box, so OnReleased pairs with the
     // OnPressed that started it rather than firing on an unrelated mouse-up.
     bool              PressedInside{false};

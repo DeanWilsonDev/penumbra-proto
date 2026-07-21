@@ -319,6 +319,32 @@ Render::Color Box::BackgroundForState() const {
     }
 }
 
+Render::Color Box::GradientTopForState() const {
+    switch (CurrentState) {
+    case InteractionState::Hovered:
+        return Style.GradientTopHovered.A != 0 ? Style.GradientTopHovered : Style.GradientTop;
+    case InteractionState::Pressed:
+        return Style.GradientTopPressed.A != 0 ? Style.GradientTopPressed : Style.GradientTop;
+    case InteractionState::Disabled:
+    case InteractionState::Default:
+    default:
+        return Style.GradientTop;
+    }
+}
+
+Render::Color Box::GradientBottomForState() const {
+    switch (CurrentState) {
+    case InteractionState::Hovered:
+        return Style.GradientBottomHovered.A != 0 ? Style.GradientBottomHovered : Style.GradientBottom;
+    case InteractionState::Pressed:
+        return Style.GradientBottomPressed.A != 0 ? Style.GradientBottomPressed : Style.GradientBottom;
+    case InteractionState::Disabled:
+    case InteractionState::Default:
+    default:
+        return Style.GradientBottom;
+    }
+}
+
 void Box::Draw(Render::Renderer& Renderer) {
     // A non-identity Transform redirects this Box's own paint plus every descendant's
     // into an offscreen texture, composited back as one scaled/rotated/translated
@@ -329,14 +355,22 @@ void Box::Draw(Render::Renderer& Renderer) {
         Renderer.PushTransform(ArrangedRect, Style.Transform);
     }
 
+    // A shadow is drawn just before this Box's own fill, so it reads as sitting
+    // behind it -- matching pharos-proto's GradientButton::Draw() order (shadow,
+    // then gradient, then border).
+    if (Style.ShadowBlurRadiusLogical > 0.0f) {
+        Renderer.DrawDropShadow(ArrangedRect, Style.ShadowColor, Style.ShadowBlurRadiusLogical, Style.BorderRadius);
+    }
+
     // GradientTop set (alpha != 0) wins over the flat ColorBackground fill --
     // same "one or the other, gradient takes priority" rule the resolver-side
     // Lustre mapping documents (a rule that sets background-gradient-start/-end
     // also sets background-color as a solid fallback would be unusual, but this
     // avoids drawing both on top of each other if it happens).
     const Render::Color Background = BackgroundForState();
-    if (Style.GradientTop.A != 0) {
-        Renderer.DrawGradientRect(ArrangedRect, Style.GradientTop, Style.GradientBottom, Style.BorderRadius);
+    const Render::Color GradientTop = GradientTopForState();
+    if (GradientTop.A != 0) {
+        Renderer.DrawGradientRect(ArrangedRect, GradientTop, GradientBottomForState(), Style.BorderRadius);
     } else if (Background.A != 0) {
         Renderer.DrawFilledRect(ArrangedRect, Background, Style.BorderRadius);
     }
