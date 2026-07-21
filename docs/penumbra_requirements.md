@@ -1,6 +1,6 @@
 # Penumbra — Requirements for Pharos
 
-> **Scope:** Capability gaps in Penumbra (as of `penumbra-proto` commit `8f2682e`,
+> **Scope:** Capability gaps in Penumbra (as of `penumbra` commit `8f2682e`,
 > "add viewport component") found while porting Pharos off Dear ImGui.
 > **Status:** Blocking. Pharos's panel layer is stubbed out (see `src/ui/*_panel.cpp`)
 > pending these additions.

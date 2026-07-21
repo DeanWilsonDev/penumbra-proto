@@ -2,7 +2,7 @@
 
 > **Scope:** A capability gap found after the initial ImGui→Penumbra port
 > (`docs/penumbra_requirements.md`) landed and the real panels were built and
-> tested against `penumbra-proto` commit `6f2509f`.
+> tested against `penumbra` commit `6f2509f`.
 > **Status:** Blocking a real, reported bug: moving the Pharos window to a
 > different display doesn't rescale correctly.
 > **Not in scope:** anything achievable in Pharos's own code. This is a
@@ -18,7 +18,7 @@
 resolution/pixel density) doesn't make the app "resize" correctly — the
 rendered content stops matching the window once it's on the new display.
 
-**Root cause**, traced through `penumbra-proto`'s current source:
+**Root cause**, traced through `penumbra`'s current source:
 
 1. `PlatformWindow::DpiScaleFactor` is queried exactly once, in `Initialise()`,
    via `SDL_GetWindowDisplayScale(Window)` (`PlatformWindow.cpp:56`), and

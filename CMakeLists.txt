@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 
 project(Penumbra
     VERSION 0.0.1
-    DESCRIPTION "Penumbra — retained-mode C++20 UI framework on SDL3 (PoC)"
+    DESCRIPTION "Penumbra — retained-mode C++20 UI framework on SDL3"
     LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)

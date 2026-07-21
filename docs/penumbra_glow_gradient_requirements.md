@@ -3,7 +3,7 @@
 > **Scope:** Two related polish gaps found while building the Atlas
 > "lighthouse haze" motif (pulsing selection/hover glow, drifting mist
 > overlay, per-tile liquid shimmer) in `src/ui/atlas_panel.cpp`, tested
-> against `penumbra-proto` commit `112c6b4962ea34313add511d2db4a26b384c4861`
+> against `penumbra` commit `112c6b4962ea34313add511d2db4a26b384c4861`
 > (the commit `cmake/Dependencies.cmake` currently pins).
 > **Status:** Not blocking. Everything described below shipped in Pharos
 > using only `Renderer::DrawDropShadow` and `Renderer::DrawGradientRect` as

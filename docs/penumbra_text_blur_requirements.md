@@ -1,7 +1,7 @@
 # Penumbra — Text/Scene Sharpness Requirements for Pharos
 
 > **Scope:** A rendering-quality gap found after `docs/penumbra_dpi_requirements.md`
-> landed, tested against `penumbra-proto` commit `a12663b`.
+> landed, tested against `penumbra` commit `a12663b`.
 > **Status:** Not blocking (nothing is broken/unusable), but a real, visible
 > quality regression from Dear ImGui: text in the Atlas panel and the Overlay
 > selector reads noticeably soft/blurry, most visible at small font sizes.
@@ -21,7 +21,7 @@ by Atlas). All panels are affected to *some* degree — Atlas and Overlay are
 just where it's most visible.
 
 Two separate, compounding causes, both traced to exact lines in
-`penumbra-proto`'s current source:
+`penumbra`'s current source:
 
 ### Cause 1 — glyph blits aren't pixel-snapped (affects every panel)
 

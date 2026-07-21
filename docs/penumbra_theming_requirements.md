@@ -1,7 +1,7 @@
 # Penumbra — Theming/Polish Requirements for Pharos
 
 > **Scope:** Gaps found pushing a "modern/sleek" theme through Pharos's
-> existing panels, tested against `penumbra-proto` commit `fd2500c`. No new
+> existing panels, tested against `penumbra` commit `fd2500c`. No new
 > widgets involved — this is about how far the *styling* surface goes.
 > **Status:** Not blocking. Pharos shipped a theme pass (deeper near-black
 > surfaces, rounded buttons/inputs/checkboxes/row-highlights, a pill-shaped

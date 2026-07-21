@@ -1,7 +1,7 @@
-# Penumbra (Proof of Concept)
+# Penumbra
 
-A retained-mode C++20 UI framework on SDL3 (`SDL_Renderer` path). This is a
-throwaway-grade PoC built to validate the layered architecture described in
+A retained-mode C++20 UI framework on SDL3 (`SDL_Renderer` path), built to
+validate the layered architecture described in
 [`penumbra_poc_spec.md`](penumbra_poc_spec.md).
 
 ## Layers
