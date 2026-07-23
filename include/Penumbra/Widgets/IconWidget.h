@@ -27,10 +27,26 @@ public:
     // treatment as everywhere else in this PoC that has no better answer.
     float SizeLogical{16.0f};
 
+    // Per-call icon tint, threaded through to IIconBackend::DrawIcon -- plain public
+    // fields (mirroring IconBackend above), not Builder methods, since <Icon>'s
+    // resolved color is set post-build by the resolver same as Label::FontBackend/
+    // Font. ColorLogical is the Default-state color; the Hovered/Pressed/Disabled
+    // overrides follow BoxStyle's own "alpha != 0 means set" fallback convention
+    // (see Box::BorderForState) -- unset means "use ColorLogical unchanged". Leaving
+    // every field default-constructed (all-zero-alpha) reproduces the pre-IconColor
+    // behaviour exactly: DrawIcon receives a zero-alpha color and the backend falls
+    // back to its own hardcoded default.
+    Render::Color ColorLogical{0, 0, 0, 0};
+    Render::Color ColorLogicalHovered{0, 0, 0, 0};
+    Render::Color ColorLogicalPressed{0, 0, 0, 0};
+    Render::Color ColorLogicalDisabled{0, 0, 0, 0};
+
     Point Measure(Point AvailableSizeLogical) override;
     void  Arrange(Rect FinalRectLogical) override;
     bool  UpdateInteractionState(const Platform::InputState&) override;
     void  Draw(Render::Renderer&) override;
+
+    InteractionState GetInteractionState() const { return CurrentState; }
 
     // Fluent, chainable construction — see ImageWidget::Builder for the naming-
     // convention rationale. Deliberately narrow: icon()/size() (Iris <Icon>'s own
@@ -53,7 +69,13 @@ public:
     };
 
 private:
-    bool PressedInside{false};
+    // The color Draw should use for CurrentState -- ColorLogicalHovered/Pressed/
+    // Disabled when set (non-zero alpha), else ColorLogical unchanged. Mirrors
+    // Box::BorderForState's fallback convention exactly.
+    Render::Color ColorForState() const;
+
+    bool             PressedInside{false};
+    InteractionState CurrentState{InteractionState::Default};
 };
 
 } // namespace Penumbra::Widgets

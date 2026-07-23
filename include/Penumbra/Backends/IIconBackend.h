@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Penumbra/Geometry.h"
+#include "Penumbra/Render/Color.h"
 
 #include <string_view>
 
@@ -22,10 +23,14 @@ class IIconBackend {
 public:
     virtual ~IIconBackend() = default;
 
-    // Draws IconName into BoundsLogical via Renderer. A no-op (not an error) if
-    // IconName isn't in the backend's catalog — callers can't validate names ahead of
-    // time since the catalog is entirely backend-owned.
-    virtual void DrawIcon(Render::Renderer& Renderer, std::string_view IconName, Rect BoundsLogical) = 0;
+    // Draws IconName into BoundsLogical via Renderer, tinted IconColor. A no-op (not
+    // an error) if IconName isn't in the backend's catalog — callers can't validate
+    // names ahead of time since the catalog is entirely backend-owned. IconColor.A ==
+    // 0 (the default-constructed Color, matching BoxStyle's own "unset" convention)
+    // means the caller expressed no preference — the backend should fall back to
+    // whatever color it already hardcodes, so existing callers that don't pass one
+    // keep rendering exactly as before this parameter existed.
+    virtual void DrawIcon(Render::Renderer& Renderer, std::string_view IconName, Rect BoundsLogical, Render::Color IconColor) = 0;
 };
 
 } // namespace Penumbra::Backends

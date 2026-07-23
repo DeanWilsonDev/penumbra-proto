@@ -10,6 +10,8 @@
 
 ## Open items
 
+None open right now.
+
 ### Explicitly not requested
 
 - **A `Disabled` gradient variant.** No known consumer wants one; adding it

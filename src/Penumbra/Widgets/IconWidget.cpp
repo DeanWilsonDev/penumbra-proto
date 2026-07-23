@@ -17,40 +17,72 @@ Point IconWidget::Measure(Point /*AvailableSizeLogical*/) { return {SizeLogical,
 void IconWidget::Arrange(Rect FinalRectLogical) { ArrangedRect = FinalRectLogical; }
 
 bool IconWidget::UpdateInteractionState(const Platform::InputState& Input) {
-    // A leaf with no children to give first refusal to. Same inert-unless-opted-in
-    // guard as ImageWidget::UpdateInteractionState.
-    if (!IsEnabled || !(OnPressed || OnReleased || OnHovered || OnFocused || OnChanged)) {
+    if (!IsEnabled) {
+        CurrentState = InteractionState::Disabled;
         PressedInside = false;
         return false;
     }
 
+    // A leaf with no children to give first refusal to. Same inert-unless-opted-in
+    // guard as ImageWidget::UpdateInteractionState -- state tracking below still
+    // runs regardless, so ColorForState() reflects hover/press even for an <Icon>
+    // that opted into none of the callbacks (e.g. DropdownMenuRow's selection-driven
+    // color swap, which reads GetInteractionState() rather than a callback).
     const bool Hovered  = PointInRect(Input.MousePosition, ArrangedRect);
     const bool Pressed  = Input.MouseButtonPressedThisFrame[LeftButton];
     const bool Down     = Input.MouseButtonDown[LeftButton];
     const bool Released = Input.MouseButtonReleasedThisFrame[LeftButton];
 
-    if (Hovered && OnHovered) {
-        OnHovered();
-    }
-    if (Pressed && Hovered) {
+    if (OnPressed || OnReleased || OnHovered || OnFocused || OnChanged) {
+        if (Hovered && OnHovered) {
+            OnHovered();
+        }
+        if (Pressed && Hovered) {
+            PressedInside = true;
+            if (OnPressed) {
+                OnPressed();
+            }
+        }
+        if (Released) {
+            if (PressedInside && OnReleased) {
+                OnReleased();
+            }
+            PressedInside = false;
+        }
+    } else if (Pressed && Hovered) {
         PressedInside = true;
-        if (OnPressed) {
-            OnPressed();
-        }
-    }
-    if (Released) {
-        if (PressedInside && OnReleased) {
-            OnReleased();
-        }
+    } else if (Released) {
         PressedInside = false;
+    }
+
+    if (PressedInside && Down && Hovered) {
+        CurrentState = InteractionState::Pressed;
+    } else if (Hovered) {
+        CurrentState = InteractionState::Hovered;
+    } else {
+        CurrentState = InteractionState::Default;
     }
 
     return Hovered || (PressedInside && Down);
 }
 
+Render::Color IconWidget::ColorForState() const {
+    switch (CurrentState) {
+    case InteractionState::Hovered:
+        return ColorLogicalHovered.A != 0 ? ColorLogicalHovered : ColorLogical;
+    case InteractionState::Pressed:
+        return ColorLogicalPressed.A != 0 ? ColorLogicalPressed : ColorLogical;
+    case InteractionState::Disabled:
+        return ColorLogicalDisabled.A != 0 ? ColorLogicalDisabled : ColorLogical;
+    case InteractionState::Default:
+    default:
+        return ColorLogical;
+    }
+}
+
 void IconWidget::Draw(Render::Renderer& Renderer) {
     if (IconBackend && !IconName.empty()) {
-        IconBackend->DrawIcon(Renderer, IconName, ArrangedRect);
+        IconBackend->DrawIcon(Renderer, IconName, ArrangedRect, ColorForState());
     }
 }
 
