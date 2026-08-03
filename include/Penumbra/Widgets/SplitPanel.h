@@ -32,6 +32,14 @@ public:
 
     void ApplyStyle(const SplitPanelStyle& Style);
 
+    // Read-only peeks at the state poured in by ApplyStyle -- callers (a style
+    // resolver, a test) that only need to inspect what landed rather than change
+    // it, same reason WidgetBase already exposes GetInteractionState() as a
+    // getter alongside CurrentState staying private.
+    Render::Color GetHandleColor() const { return ColorHandle; }
+    Render::Color GetHandleColorHovered() const { return ColorHandleHovered; }
+    Render::Color GetHandleColorDragged() const { return ColorHandleDragged; }
+
     Point Measure(Point AvailableSizeLogical) override;
     void  Arrange(Rect FinalRectLogical) override;
     bool  UpdateInteractionState(const Platform::InputState&) override;
