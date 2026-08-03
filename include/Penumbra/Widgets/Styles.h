@@ -12,7 +12,18 @@ struct EdgeInsets {
     float Bottom;
 };
 
-enum class LayoutMode { None, VerticalStack, HorizontalStack };
+// FixedLeadingStack: children[0] ("Leading") gets exactly Box::LeadingExtentLogical
+// along the main axis (Y), regardless of its own measured size; every subsequent
+// child ("Fill") shares whatever's left after Leading + ChildGap. Unlike
+// VerticalStack/HorizontalStack, this mode's own Box::Measure() reports back the
+// full available size (greedy) rather than the sum of its children's sizes --
+// matching the hand-rolled FixedLeadingStrip composite (pharos-proto's
+// src/ui/layout_helpers.h) this generalizes: a fixed-height leading child (a
+// toolbar, a header) above a greedy fill child (a SplitPanel/ViewportWidget,
+// which itself reports "whatever I'm given" as its own desired size) can't be
+// expressed by VerticalStack, which hands every child the same undiminished
+// ContentAvailable regardless of a preceding sibling (see docs/next_steps.md).
+enum class LayoutMode { None, VerticalStack, HorizontalStack, FixedLeadingStack };
 enum class CrossAlign { Start, Center, End, Stretch };
 
 // The universal style slots — the "tokens" every widget honours. Penumbra defines

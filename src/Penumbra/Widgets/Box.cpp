@@ -123,6 +123,35 @@ Point Box::Measure(Point AvailableSizeLogical) {
 
     if (Layout == LayoutMode::None) {
         ContentDesired = MeasureContent(ContentAvailable);
+    } else if (Layout == LayoutMode::FixedLeadingStack) {
+        // Greedy, like the FixedLeadingStrip composite this generalizes
+        // (Measure() there just returns AvailableSizeLogical unchanged): this Box
+        // reports back the full ContentAvailable rather than the sum of its
+        // children's sizes, since Leading/Fill's own extents are dictated by
+        // LeadingExtentLogical/the remainder, not by what they'd naturally
+        // measure. Each child's own Measure() is still called (children[0] with
+        // exactly LeadingExtentLogical, every child after it with whatever's left
+        // once Leading + ChildGap are subtracted) so nested widgets update
+        // whatever they cache there -- the *returned* Point plays no part in this
+        // Box's own Desired, only in Arrange's cross-axis placement below.
+        const float LeadingExtent = NonNegative(LeadingExtentLogical);
+        const float FillHeight    = NonNegative(ContentAvailable.Y - LeadingExtent - ChildGap);
+
+        bool LeadingSeen = false;
+        for (std::size_t Index = 0; Index < Children.size(); ++Index) {
+            WidgetBase* Child = Children[Index].get();
+            if (!Child->GetIsVisible()) {
+                continue;
+            }
+            const EdgeInsets Margin     = Child->GetMarginLogical();
+            const float      SlotHeight = LeadingSeen ? FillHeight : LeadingExtent;
+            const Point ChildAvailable{NonNegative(ContentAvailable.X - Margin.Left - Margin.Right),
+                                       NonNegative(SlotHeight - Margin.Top - Margin.Bottom)};
+            Child->Measure(ChildAvailable);
+            LeadingSeen = true;
+        }
+
+        ContentDesired = ContentAvailable;
     } else {
         const bool Vertical = (Layout == LayoutMode::VerticalStack);
         float MainTotal = 0.0f;
@@ -174,7 +203,6 @@ void Box::Arrange(Rect FinalRectLogical) {
     }
 
     const Rect Content = ContentRectFrom(FinalRectLogical);
-    const bool Vertical = (Layout == LayoutMode::VerticalStack);
 
     // Places a child along the CROSS axis, returning its {position, extent}.
     auto PlaceCross = [&](float ContentStart, float ContentExtent, float ChildExtent,
@@ -193,6 +221,42 @@ void Box::Arrange(Rect FinalRectLogical) {
         return {ContentStart + MarginLead, ChildExtent};
     };
 
+    if (Layout == LayoutMode::FixedLeadingStack) {
+        // Mirrors FixedLeadingStrip::Arrange: Leading (children[0]) gets exactly
+        // LeadingExtentLogical of the main axis (clamped to Content.H so it can't
+        // overflow a too-small container), Fill (every child after it) gets
+        // whatever's left once Leading + ChildGap are subtracted -- neither slot is
+        // sized by its own measured main-axis extent the way an ordinary
+        // VerticalStack child is. Only the cross axis (width) still goes through
+        // PlaceCross/CrossAlignment as usual, which needs each child's own
+        // measured cross-axis size -- hence the Measure() call below, whose Y
+        // component is otherwise discarded in favour of the slot's own height.
+        const float LeadingExtent = std::min(NonNegative(LeadingExtentLogical), Content.H);
+        const float FillTop       = std::min(Content.H, LeadingExtent + ChildGap);
+        const float FillHeight    = NonNegative(Content.H - FillTop);
+
+        bool LeadingSeen = false;
+        for (std::size_t Index = 0; Index < Children.size(); ++Index) {
+            WidgetBase* Child = Children[Index].get();
+            if (!Child->GetIsVisible()) {
+                continue;
+            }
+            const EdgeInsets Margin     = Child->GetMarginLogical();
+            const float      SlotTop    = LeadingSeen ? (Content.Y + FillTop) : Content.Y;
+            const float      SlotHeight = LeadingSeen ? FillHeight : LeadingExtent;
+
+            const Point ChildAvailable{NonNegative(Content.W - Margin.Left - Margin.Right),
+                                       NonNegative(SlotHeight - Margin.Top - Margin.Bottom)};
+            const Point Desired = Child->Measure(ChildAvailable);
+
+            auto [CrossPos, CrossExtent] = PlaceCross(Content.X, Content.W, Desired.X, Margin.Left, Margin.Right);
+            Child->Arrange({CrossPos, SlotTop + Margin.Top, CrossExtent, NonNegative(SlotHeight - Margin.Top - Margin.Bottom)});
+            LeadingSeen = true;
+        }
+        return;
+    }
+
+    const bool Vertical = (Layout == LayoutMode::VerticalStack);
     const std::size_t Count = Children.size();
     float Cursor = Vertical ? Content.Y : Content.X;
     bool  AnyVisible = false;

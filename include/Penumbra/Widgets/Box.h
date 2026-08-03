@@ -20,6 +20,13 @@ public:
     float                                    ChildGap{0.0f};
     CrossAlign                               CrossAlignment{CrossAlign::Start};
 
+    // Only meaningful when Layout == LayoutMode::FixedLeadingStack: the exact
+    // main-axis (Y) extent children[0] ("Leading") is arranged at, regardless of
+    // its own measured size. -1 (the default) behaves as 0 -- an unset extent
+    // collapses Leading rather than giving it the whole Box, matching
+    // WidthLogical/HeightLogical's own "explicit non-negative override" shape.
+    float                                    LeadingExtentLogical{-1.0f};
+
     WidgetBase* AddChild(std::unique_ptr<WidgetBase> Child);
     WidgetBase* InsertChildAt(std::size_t Index, std::unique_ptr<WidgetBase> Child);
 
