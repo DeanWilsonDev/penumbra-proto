@@ -19,6 +19,11 @@ public:
     LayoutMode                               Layout{LayoutMode::None};
     float                                    ChildGap{0.0f};
     CrossAlign                               CrossAlignment{CrossAlign::Start};
+    // Main-axis distribution for VerticalStack/HorizontalStack only (see Justify's own
+    // doc comment, Styles.h) -- Start (the default) is sequential packing from Content's
+    // start, identical to every Box's behavior before this field existed. Not consulted
+    // by FixedLeadingStack or None.
+    Justify                                  JustifyContentMode{Justify::Start};
 
     // Only meaningful when Layout == LayoutMode::FixedLeadingStack: the exact
     // main-axis (Y) extent children[0] ("Leading") is arranged at, regardless of

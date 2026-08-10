@@ -258,7 +258,53 @@ void Box::Arrange(Rect FinalRectLogical) {
 
     const bool Vertical = (Layout == LayoutMode::VerticalStack);
     const std::size_t Count = Children.size();
-    float Cursor = Vertical ? Content.Y : Content.X;
+
+    // JustifyContentMode distribution needs the total main-axis extent every visible
+    // child will occupy *before* any of them is placed (Center centers the whole group;
+    // End anchors it to the far edge; SpaceBetween spreads the leftover room evenly
+    // between siblings) -- Start (the overwhelmingly common case, and every Box's
+    // behavior before this field existed) needs none of that, so it skips this pass
+    // entirely and falls straight into the unchanged sequential-packing loop below.
+    float StartOffset   = 0.0f;
+    float ExtraGapPerGap = 0.0f;
+    if (JustifyContentMode != Justify::Start) {
+        float       TotalChildrenMain = 0.0f;
+        std::size_t VisibleCount      = 0;
+        for (std::size_t Index = 0; Index < Count; ++Index) {
+            WidgetBase* Child = Children[Index].get();
+            if (!Child->GetIsVisible()) {
+                continue;
+            }
+            const EdgeInsets Margin = Child->GetMarginLogical();
+            const Point ChildAvailable{NonNegative(Content.W - Margin.Left - Margin.Right),
+                                       NonNegative(Content.H - Margin.Top - Margin.Bottom)};
+            const Point Desired = Child->Measure(ChildAvailable);
+            TotalChildrenMain += (Vertical ? Desired.Y + Margin.Top + Margin.Bottom
+                                            : Desired.X + Margin.Left + Margin.Right);
+            ++VisibleCount;
+        }
+
+        const float ContentMain = Vertical ? Content.H : Content.W;
+        const float TotalGaps =
+            VisibleCount > 1 ? static_cast<float>(VisibleCount - 1) * ChildGap : 0.0f;
+        const float FreeSpace = NonNegative(ContentMain - TotalChildrenMain - TotalGaps);
+
+        switch (JustifyContentMode) {
+        case Justify::Start:
+            break; // unreachable (guarded above); keeps the switch exhaustive
+        case Justify::Center:
+            StartOffset = FreeSpace / 2.0f;
+            break;
+        case Justify::End:
+            StartOffset = FreeSpace;
+            break;
+        case Justify::SpaceBetween:
+            ExtraGapPerGap = VisibleCount > 1 ? FreeSpace / static_cast<float>(VisibleCount - 1) : 0.0f;
+            break;
+        }
+    }
+
+    float Cursor = (Vertical ? Content.Y : Content.X) + StartOffset;
     bool  AnyVisible = false;
 
     for (std::size_t Index = 0; Index < Count; ++Index) {
@@ -273,7 +319,7 @@ void Box::Arrange(Rect FinalRectLogical) {
         const Point Desired = Child->Measure(ChildAvailable);
 
         if (AnyVisible) {
-            Cursor += ChildGap;
+            Cursor += ChildGap + ExtraGapPerGap;
         }
 
         if (Vertical) {

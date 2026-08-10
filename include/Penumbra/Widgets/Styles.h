@@ -26,6 +26,21 @@ struct EdgeInsets {
 enum class LayoutMode { None, VerticalStack, HorizontalStack, FixedLeadingStack };
 enum class CrossAlign { Start, Center, End, Stretch };
 
+// Main-axis distribution for VerticalStack/HorizontalStack, parallel to CrossAlign's
+// cross-axis alignment above -- mirrors lustre's own Lustre::Justify (ResolvedStyle.h)
+// exactly, the CSS `justify-content` property this exists to satisfy (docs/next_steps.md:
+// pharos-proto's ThreeZoneRow -- a hand-rolled left/center/right-justified row -- exists
+// only because Box::Arrange had no main-axis distribution, only sequential packing from
+// the start). Start is the default and reproduces every existing Box's behavior exactly
+// (sequential packing from Content's main-axis start, ChildGap between siblings, no other
+// change) -- Center/End/SpaceBetween are opt-in via Box::JustifyContentMode. Not
+// meaningful for FixedLeadingStack (that layout's two slots are sized directly by
+// LeadingExtentLogical/the remainder, not distributed) or LayoutMode::None (no children
+// laid out at all). No SpaceAround/SpaceEvenly -- not requested by any real consumer;
+// `justify-content`'s four keyword values are the concrete ask, not a full
+// flexbox-equivalent distribution model (see this repo's docs/next_steps.md).
+enum class Justify { Start, Center, End, SpaceBetween };
+
 // The universal style slots — the "tokens" every widget honours. Penumbra defines
 // the SHAPE; it supplies NO values and NO semantic names. Default-constructed it is
 // all-zero (transparent, no border, no spacing): the absence of styling, not an
