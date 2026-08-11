@@ -58,6 +58,94 @@ target_link_libraries(penumbra PUBLIC SDL3::SDL3 SDL3_ttf::SDL3_ttf)
 target_link_libraries(penumbra PRIVATE SDL3_image::SDL3_image)
 
 # ---------------------------------------------------------------------------
+# Optional Nyx bridge -- makes Penumbra::Application inheritable from a .nyx
+# script (nyx-proto's RegisterInheritableType/NyxBridge mechanism,
+# include/Penumbra/Nyx/ApplicationBridge.h, docs/next_steps.md's "Application
+# base class" entry). Off by default: nothing else in Penumbra (including the
+# demo) depends on nyx-proto, and enabling this pulls in a whole second
+# interpreter plus its own C++26-only build -- a consumer opts in explicitly
+# with -DPENUMBRA_WITH_NYX=ON.
+# ---------------------------------------------------------------------------
+option(PENUMBRA_WITH_NYX "Build Penumbra::Nyx::ApplicationBridge (requires nyx-proto)" OFF)
+
+if(PENUMBRA_WITH_NYX)
+    include(FetchContent)
+
+    # Tracks `main`, not a pinned commit -- same trade-off pharos-proto's own
+    # cmake/Dependencies.cmake documents for its own nyx-proto dependency:
+    # nyx-proto is under active, alongside co-development, no released tag yet.
+    #
+    # Populate-source-only, not FetchContent_MakeAvailable/add_subdirectory of
+    # nyx-proto's own top-level CMakeLists.txt -- that file unconditionally
+    # add_subdirectory()s external/cimmerian and tests/, neither of which
+    # Penumbra needs just to consume nyx-core as a library. nyx-core and its
+    # own Firefly logging dependency are declared directly below instead,
+    # mirroring nyx-proto/CMakeLists.txt's own `nyx-core` target.
+    FetchContent_Declare(
+        nyx
+        GIT_REPOSITORY https://github.com/DeanWilsonDev/nyx-proto.git
+        GIT_TAG        main
+    )
+    FetchContent_GetProperties(nyx)
+    if(NOT nyx_POPULATED)
+        FetchContent_Populate(nyx)
+    endif()
+
+    # Firefly (nyx-core's own logging dependency, vendored at
+    # external/firefly) guards its own test/cimmerian subdirectories behind
+    # an IS_ROOT_PROJECT check (external/firefly/CMakeLists.txt), so
+    # add_subdirectory()ing it here -- not as the CMake root -- pulls in only
+    # the `firefly` library target itself. AMANUENSIS_BUILD_TESTS OFF for the
+    # same reason nyx-proto's own top-level CMakeLists.txt forces it off
+    # before this same add_subdirectory call: Amanuensis's own test suite
+    # (which vendors its own copy of Cimmerian) is unwanted here, and nothing
+    # else in this build declares an `amanuensis` target first (unlike
+    # pharos-proto, which already gets one from `iris` and has to work around
+    # the collision -- not a concern here).
+    set(AMANUENSIS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    add_subdirectory(${nyx_SOURCE_DIR}/external/firefly ${CMAKE_CURRENT_BINARY_DIR}/_deps/firefly-build)
+
+    # nyx-core itself -- same source list as nyx-proto/CMakeLists.txt's own
+    # `nyx-core` target. Built at C++26 (nyx-proto's own required standard),
+    # independent of Penumbra's own CMAKE_CXX_STANDARD 20; consuming TUs
+    # (src/Penumbra/Nyx/ApplicationBridge.cpp) include nyx-core's public
+    # headers at Penumbra's own standard without issue, same as
+    # pharos-proto's own C++20 code consuming the same headers.
+    add_library(nyx-core STATIC
+        ${nyx_SOURCE_DIR}/src/lexer/token.cpp
+        ${nyx_SOURCE_DIR}/src/lexer/lexer.cpp
+        ${nyx_SOURCE_DIR}/src/parser/parser.cpp
+        ${nyx_SOURCE_DIR}/src/runtime/value.cpp
+        ${nyx_SOURCE_DIR}/src/runtime/environment.cpp
+        ${nyx_SOURCE_DIR}/src/interpreter/decl-registry.cpp
+        ${nyx_SOURCE_DIR}/src/interpreter/interpreter.cpp
+        ${nyx_SOURCE_DIR}/src/host/logging.cpp
+        ${nyx_SOURCE_DIR}/src/host/stub-types.cpp)
+    target_include_directories(nyx-core PUBLIC ${nyx_SOURCE_DIR}/src)
+    target_link_libraries(nyx-core PRIVATE firefly)
+    set_target_properties(nyx-core PROPERTIES
+        CXX_STANDARD 26
+        CXX_STANDARD_REQUIRED ON)
+
+    add_library(penumbra_nyx_bridge STATIC
+        src/Penumbra/Nyx/ApplicationBridge.cpp)
+    target_link_libraries(penumbra_nyx_bridge PUBLIC penumbra nyx-core)
+
+    # demo_nyx — mini demo proving the bridge end to end: DemoApplication
+    # (demo_nyx/assets/DemoApp.nyx) is a real .nyx class extending Application,
+    # not a C++ subclass -- window/renderer construction and the frame loop are
+    # entirely owned by Penumbra::Application::Run(), reached through
+    # Penumbra/EntryPoint.h exactly like any plain C++ app.
+    add_executable(penumbra_demo_nyx
+        demo_nyx/main.cpp)
+    target_link_libraries(penumbra_demo_nyx PRIVATE penumbra_nyx_bridge)
+    set_target_properties(penumbra_demo_nyx PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/demo_nyx")
+    target_compile_definitions(penumbra_demo_nyx PRIVATE
+        DEMO_NYX_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/demo_nyx/assets")
+endif()
+
+# ---------------------------------------------------------------------------
 # Demo — executable. The ONLY target that defines values. Links penumbra.
 # ---------------------------------------------------------------------------
 add_executable(penumbra_demo

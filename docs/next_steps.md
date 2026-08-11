@@ -6,11 +6,259 @@
 > this kind in this repo (previously used `docs/*_requirements.md`, one
 > file per investigation, still present as historical record — not
 > migrated into here retroactively).
-> Last updated: 2026-08-10.
+> Last updated: 2026-08-11.
 
 ## Open items
 
-_None open right now._
+### Fixed 2026-08-11: `Penumbra::Application` had no window/frame-loop ownership — only a narrow `IWidgetLifecycle::OnTick` dispatcher
+
+> **Trigger:** `pharos-proto` wants to build a Nyx-driven `.nyx` application (its own
+> "Nyx-native application" entry, `pharos-proto/docs/next_steps.md`) whose first milestone
+> is a `.nyx` script owning window bootstrap itself, not just UI-tree composition inside an
+> already-C++-owned window. Nyx's own inheritance-from-`Application` pattern (`class
+> SnakeApplication : Application { ... }`, exercised throughout `nyx-proto/tests/
+> host_test.cpp`) is designed for exactly this: a Nyx script's entry-point class inherits
+> from a real C++ `Application` base and overrides its lifecycle hooks. `nyx-proto`'s own
+> decision log (`docs/nyx-scripting-language/decision-log.md` §6.4/§6.5, both resolved)
+> designed the mechanism and built the Nyx-side half — but explicitly assigns writing the
+> actual base class + bridge specialization to "Umbra and Penumbra each provide one bridge
+> per inheritable type — written once, in the integration layer, not in game code" (§6.5).
+> Nobody has done that for Penumbra yet.
+
+Confirmed directly against real source, not guessed:
+
+- **`nyx-proto`'s side is built and tested.** `RegisterInheritableType<T>()` (a builder
+  registering a C++ base type as Nyx-inheritable, with an `.Override(name, thunk)` per
+  overridable method) and the two-part bridge mechanism (`NyxBridgeBase` + a per-type
+  `NyxBridge<T>` specialization) are both real and exercised end-to-end in
+  `nyx-proto/tests/host_test.cpp` via a stand-in `FakeEngineApplication`/
+  `NyxBridge<FakeEngineApplication>` — Nyx scripts declaring `class SnakeApplication :
+  Application { override void OnUpdate(float dt) { ... } }` are instantiated as real bridge
+  objects, and Nyx-side super calls (`Application::Initialize()`) correctly reach the C++
+  base through a qualified-call thunk (not a raw pointer-to-member, which the decision log
+  notes was tried and recurses infinitely through virtual dispatch — see §6.4's "Corrected
+  during implementation" note).
+- **The decision log sketches a concrete hook set for the integration-layer base class**
+  (`Engine::Application` in the sketch — a placeholder name, not a real Penumbra type):
+  `Initialize()`, `OnUpdate(float dt)`, `OnRender(const IRenderer&)`,
+  `Configure(ApplicationConfig&)`, `RegisterDependencies()`. This is a starting sketch from
+  `nyx-proto`'s own design side, not a spec Penumbra is bound to — `IRenderer`/
+  `ApplicationConfig` don't exist in Penumbra today, and the real hook set should be derived
+  from what Penumbra's actual bootstrap/frame loop needs (below), not copied verbatim.
+- **Penumbra already ships an unrelated `Penumbra::Application`**
+  (`include/Penumbra/Application.h`/`src/Penumbra/Application.cpp`) — but it's a narrow
+  per-frame `OnTick` dispatcher over a list of registered `IWidgetLifecycle*`
+  (`RegisterLifecycle`/`UnregisterLifecycle`/`Tick`), with no window/platform ownership, no
+  `Initialize`/`OnRender`/shutdown hooks, and zero `RegisterInheritableType`/`NyxBridge`
+  wiring. Grepped every consumer in `penumbra-proto`, `penumbra-ui-backend`, and
+  `pharos-proto` — it's currently referenced nowhere outside its own `.cpp`, i.e. unused
+  today. This is a real naming collision to resolve deliberately (extend this type into the
+  fuller lifecycle base this entry asks for, or introduce a differently-named one and decide
+  how the two relate) — not something to guess at from a consuming repo.
+- **What a real Penumbra `Application` base would need to own, grounded in `pharos-proto`'s
+  actual bootstrap** (`pharos-proto/src/main.cpp`, the only real caller of this shape
+  today): constructing `PlatformWindow` and calling `Initialise("Pharos", ...)`
+  (`main.cpp:71-72`), constructing `Renderer` and calling
+  `Initialise(window.GetSdlRenderer(), ...)` (`main.cpp:90`), and the per-frame loop ending
+  in `EndFrameAndPresent()` (`main.cpp:339`) — currently all hand-rolled per-app C++, exactly
+  the "we aren't rewriting it in every app" duplication this entry exists to close.
+
+### What shipped
+
+Resolved the naming collision by extending the existing `Penumbra::Application`
+(`include/Penumbra/Application.h`/`src/Penumbra/Application.cpp`) in place, rather than
+introducing a differently-named type — its `RegisterLifecycle`/`UnregisterLifecycle`/`Tick`
+`IWidgetLifecycle` dispatch is kept unchanged and still fires once per frame, now
+automatically from inside the new `Run()` loop, immediately before `OnUpdate` (preserving
+its own doc comment's contract: lifecycle ticks fire before reconciliation/Measure/Arrange).
+
+`Application` now owns `Platform::PlatformWindow`, `Render::Renderer`, and a
+`Render::SdlTtfFontBackend` (the only real `IFontBackend` implementation today, same
+ownership precedent as `PlatformWindow` owning "the only code that talks to SDL") as
+private members, plus a new `ApplicationConfig` struct (`Title`/`WindowLogicalWidth`/
+`WindowLogicalHeight`/`ClearColor`). `Run()` sequences `Configure(Config)` → window →
+renderer/font-backend construction → `OnStart()` → the frame loop → `OnShutdown()`, mirroring
+`demo/main.cpp`'s and `pharos-proto/src/main.cpp`'s hand-rolled shape exactly (both grounded
+this design, per the trigger below) including the per-frame DPI-scale-change tracking both
+of them duplicated by hand — now a single `OnDpiScaleChanged(float)` hook fired once when
+`Window.GetDpiScaleFactor()` changes between frames, instead of copy-pasted inline in every
+app's loop. Hook names landed exactly on the doc's own "naming TBD" sketch above:
+`Configure(ApplicationConfig&)`, `OnStart()` (returns `bool`; `false` aborts `Run()` before
+the frame loop starts, mirroring `PlatformWindow::Initialise`/`Renderer::Initialise`'s own
+bool-failure convention), `OnUpdate(float DeltaSeconds)`, `OnRender(Render::Renderer&)`,
+`OnShutdown()`. Protected accessors (`GetWindow`/`GetRenderer`/`GetFontBackend`/`GetInput`/
+`GetConfig`) give overrides everything `main.cpp` closed over locally today. `RequestQuit()`
+lets a subclass end the loop itself, alongside the existing OS-quit path
+(`PumpEventsAndBuildInput` returning `false`).
+
+Verified with a standalone scratch subclass (this repo's usual verification precedent, no
+automated widget test suite) run under `SDL_VIDEODRIVER=dummy`: confirmed `Configure` →
+window/renderer/font-backend construction → `OnStart` (with a live, non-null window and font
+backend) → three frames of `Tick`+`OnUpdate`+`OnRender` firing 1:1 in order, with the
+registered `IWidgetLifecycle`'s `OnMount`/`OnTick`/`OnUnmount` firing at the right points
+(`OnMount` inside `OnStart`'s `RegisterLifecycle` call, `OnTick` once per frame before
+`OnUpdate`, `OnUnmount` inside `OnShutdown`'s `UnregisterLifecycle` call) → `RequestQuit()`
+from inside `OnUpdate` ending the loop → `OnShutdown` → `Run()` returning `0`. Library and
+`penumbra_demo` (unchanged — this is purely additive to `Application`, not a `main.cpp`
+migration) both stay clean under `cmake --build build`.
+
+### What this unblocks
+
+Any Penumbra app's `main.cpp` can now replace its hand-rolled window/renderer construction
+and frame loop (`pharos-proto/src/main.cpp`'s and `demo/main.cpp`'s own shape, both grounded
+this design) with a subclass of `Penumbra::Application` overriding `OnStart`/`OnUpdate`/
+`OnRender`. This does **not** yet unblock `pharos-proto`'s Nyx-native-application milestone
+by itself — that still needs the `nyx-proto` half (`RegisterInheritableType<Application>`
++ a `NyxBridge<Application>` specialization), deliberately deferred out of this pass (see
+below) now that the C++ base shape it would bridge actually exists.
+
+### Explicitly not requested
+
+- ~~The `nyx-proto` `RegisterInheritableType`/`NyxBridge<Application>` wiring itself.~~ Done
+  below (Fixed 2026-08-11: "Nyx bridge + entry point mechanism").
+- **Migrating `demo/main.cpp` or `pharos-proto/src/main.cpp` to actually subclass the new
+  base.** This entry ships the base class only; converting either app's existing hand-rolled
+  `main.cpp` to use it is separate follow-up work, not required for the base class itself to
+  be real and buildable.
+- **A full engine dependency-injection system.** The decision log's sketch hook
+  `RegisterDependencies()` is noted for completeness, not requested here — scope this entry
+  to bootstrap/frame-loop ownership and the inheritance wiring, not a broader DI framework.
+- **Migrating existing widget-lifecycle dispatch (`IWidgetLifecycle`/the existing
+  `Application::Tick`) to something new.** Kept exactly as it was — `Application` now just
+  calls `Tick` for the caller automatically instead of requiring the frame-loop owner to call
+  it by hand.
+
+### Fixed 2026-08-11: Nyx bridge + entry point mechanism — `Penumbra::Application` still wasn't actually inheritable from a `.nyx` script, and every app hand-rolled its own `main()`
+
+> **Trigger:** direct follow-up request, once the base class above existed: wire up
+> `nyx-proto`'s `RegisterInheritableType`/`NyxBridge` mechanism for real (this repo had
+> deliberately deferred it, `PENUMBRA_WITH_NYX` and the dependency-cost question above), and
+> give Penumbra a "simple entry point mechanism" analogous to a Hazel-style engine's
+> `engine/entry-point.hpp` (`extern IApplication* CreateApplication(); int main() {...}`) —
+> explicitly asked to "work the nyx bridge into this pattern somehow."
+
+Confirmed directly against `nyx-proto`'s real source before writing anything: the `Override`
+thunk `nyx-proto/src/host/inheritable-type-builder.hpp` generates is a **free function**
+(`Ret (*)(T&, Args...)`, converted from a non-capturing lambda via `+[]`), not a member of
+`T`'s own hierarchy — `nyx-proto`'s own `FakeEngineApplication` test stand-in makes
+`Initialize`/`OnUpdate` `public` for exactly this reason. A protected hook (what
+`Application`'s hooks were, from the entry above) cannot be reached from a plain
+`self.Application::Method()` qualified call written outside the class, so bridging is
+impossible without a visibility change. Also confirmed `nyx-proto/src/host/marshal.hpp`
+marshals primitives/`void` only (`bool`/`int32`/`int64`/`float`/`double`/`std::string`) — no
+overload exists for an arbitrary C++ reference like `Render::Renderer&` or
+`ApplicationConfig&`, so those two hooks structurally cannot be bridged without a
+`marshal.hpp` change (a `nyx-proto` change, out of scope here).
+
+### What shipped
+
+**Visibility fix:** `OnStart`/`OnUpdate`/`OnShutdown`/`OnDpiScaleChanged` moved from
+`protected` to `public` on `Application` (`include/Penumbra/Application.h`) — exactly the
+four hooks bridged below, and exactly why: the other two hooks, `Configure` and `OnRender`,
+stay `protected` since they're not bridgeable (see above) and have no other reason to be
+public.
+
+**The bridge itself**, `include/Penumbra/Nyx/ApplicationBridge.h` /
+`src/Penumbra/Nyx/ApplicationBridge.cpp`: a `template<> nyx::host::NyxBridge<Penumbra::
+Application>` specialization (defined in the `.cpp`, not the header — nothing outside this
+file needs to name it directly) overriding those same four hooks, each `Invoke`-ing the
+Nyx-side override when one exists and falling back to `Application`'s real C++ default via a
+qualified super call otherwise — the identical pattern `nyx-proto`'s own
+`NyxBridge<FakeEngineApplication>` test stand-in already proved generically, now written for
+real against Penumbra's own type. `Penumbra::Nyx::LoadApplication(source, filename,
+className)` / `LoadApplicationFromFile(path, className)` wrap
+`RegisterInheritableType<Application>("Application").Override(...)` (registered once, guarded
+by a `bool`, not re-registered on repeat calls) plus `NyxRuntime::MountBridged<Application>`
+into a single call returning a plain `Application*` — catching `LexError`/`ParseError`/
+`RuntimeError` (confirmed all three derive from `std::runtime_error`) and returning `nullptr`
+on failure instead of letting them propagate as C++ exceptions, matching Penumbra's existing
+bool/nullptr-return error convention (`PlatformWindow::Initialise`,
+`Renderer::Initialise`) rather than `nyx-proto`'s own throw-based one. The returned
+`Application*`'s backing `NyxRuntime`/`Interpreter` are kept alive in a static, process-lifetime
+registry internal to the `.cpp` (documented as such) — correct for this factory's own stated
+contract ("call once, from `main()`, for the app's whole lifetime"); a caller wanting a
+shorter-lived or repeated-mount scope should drive `NyxRuntime`/`MountBridged` directly
+instead, using the same public `NyxBridge<Application>` specialization... except it isn't
+public (see above) — noted as a real limitation below, not silently glossed over.
+
+**The entry point**, `include/Penumbra/EntryPoint.h`: `extern Penumbra::Application*
+CreateApplication();` plus a real `int main()` that calls it, runs `Run()`, and deletes the
+result — a direct match for `snake/src/engine/entry-point.hpp`'s own shape. Needs no
+Nyx-specific case at all: `CreateApplication()` returning a plain C++ `Application` subclass
+or an `Application*` obtained from `Penumbra::Nyx::LoadApplication` are indistinguishable to
+`main()`, since `Run()` only ever calls virtual hooks — this is the concrete payoff of the
+"work the Nyx bridge into this pattern" ask, not a bolted-on second path.
+
+**Build wiring:** a new `PENUMBRA_WITH_NYX` CMake option (default `OFF`) gates a
+`FetchContent`-populated-source-only `nyx-core` + `firefly` build (mirroring
+`pharos-proto/cmake/Dependencies.cmake`'s own nyx-proto dependency, simplified since this repo
+has no `iris`/`amanuensis` target already declared to collide with — `add_subdirectory`ing
+`firefly` directly works here, no hand-copied source-file-list workaround needed) and a new
+`penumbra_nyx_bridge` static library target. Off by default: the main `penumbra` library and
+`penumbra_demo` have zero dependency on `nyx-proto`, unchanged.
+
+Verified against the real `nyx-proto` repo (network-fetched, not stubbed) with
+`-DPENUMBRA_WITH_NYX=ON`: a standalone scratch program (this repo's usual verification
+precedent) called `Penumbra::Nyx::LoadApplication` against four real `.nyx` sources and
+called the resulting `Application*`'s hooks directly (no window/SDL needed — `OnStart` etc.
+are pure dispatch, same reasoning as `Box`'s own `Measure`/`Arrange` verification not needing
+a window). All four passed: a script overriding `OnStart` to return `false` — confirmed the
+override is reached, not silently ignored; a script with no overrides — confirmed the C++
+default (`true`) is reached via fallback; a script explicitly calling
+`Application::OnStart()` as a super call before returning `false` — confirmed the qualified
+super-call thunk reaches the real base without infinitely recursing back into the Nyx
+override (the exact failure mode `nyx-proto`'s own decision log §6.4 documents fixing); and a
+class not extending `"Application"` — confirmed `LoadApplication` returns `nullptr` with a
+diagnostic on `stderr`, not a crash or an uncaught exception. Default (`PENUMBRA_WITH_NYX`
+unset) and opt-in builds both verified clean under `cmake --build`.
+
+**Follow-up, same day:** added a real `penumbra_demo_nyx` executable (`demo_nyx/main.cpp` +
+`demo_nyx/assets/DemoApp.nyx`, also `PENUMBRA_WITH_NYX`-gated) as a standing, runnable
+end-to-end proof, not just the throwaway scratch program above — `DemoApplication` is defined
+entirely in `DemoApp.nyx`, not C++, overriding `OnStart`/`OnUpdate`/`OnShutdown`; its C++ host
+(`demo_nyx/main.cpp`) only registers two callbacks (`Log`, `Tick`) via a new
+`Penumbra::Nyx::GetRuntime()` accessor (exposes the same process-lifetime `NyxRuntime`
+`LoadApplication` uses internally) and loads the script — window construction and the frame
+loop are entirely `Penumbra::Application::Run()`'s. Verified two ways: headless
+(`SDL_VIDEODRIVER=dummy`) showing `OnStart`/periodic `OnUpdate`/`OnShutdown` all firing from
+the real script, plus the `Tick` callback (invoked *from* the Nyx script every frame) calling
+`RequestQuit()` on the live `Application*` after 300 frames to end the run — the concrete
+illustration of "a Nyx script can't call `RequestQuit()` directly, but a host callback it
+calls into, can." Then re-run with a real (non-dummy) SDL video driver — an actual window
+opened on screen, ran for ~5 seconds at real display timing (`dt` in the 0.006–0.011s range,
+vs. the dummy driver's near-zero), and auto-closed cleanly, exit code 0.
+
+### What this unblocks
+
+`pharos-proto`'s planned `.nyx`-driven application (a Nyx script owning its own window, the
+first milestone of its "Nyx-native application" effort) is now genuinely buildable for the
+lifecycle-hook half of that story: a Nyx `class PharosApplication : Application { ... }`
+overriding `OnStart`/`OnUpdate`/`OnShutdown`/`OnDpiScaleChanged`, loaded via
+`Penumbra::Nyx::LoadApplication` and driven through `Penumbra/EntryPoint.h`'s `main()`
+exactly like any plain C++ app. Any Penumbra app (Nyx-driven or not) can also now drop its
+own hand-rolled `main()` in favor of `#include "Penumbra/EntryPoint.h"` + one
+`CreateApplication()` definition.
+
+### Explicitly not requested
+
+- **Bridging `Configure(ApplicationConfig&)` or `OnRender(Render::Renderer&)`.** Structurally
+  blocked on `nyx-proto/src/host/marshal.hpp` only marshalling primitives/`void` today — a
+  `nyx-proto` change, not a `penumbra-proto` one. A Nyx-driven `Application` subclass
+  therefore cannot yet control the window title/size/clear color from script, or draw
+  anything from script — `OnRender`'s C++ default (a no-op) always runs unless a cooperating
+  C++-side mechanism (not built here) supplies one. This is a real, load-bearing gap for
+  `pharos-proto`'s actual "own window bootstrap" milestone, left for whoever picks that up
+  next to design deliberately rather than guessed at here.
+- ~~Exposing `nyx::host::NyxBridge<Application>` publicly, or any way for a caller to
+  register extra Nyx-callable host functions.~~ Partially done in the same-day follow-up
+  above: `Penumbra::Nyx::GetRuntime()` exposes the shared `NyxRuntime` for
+  `RegisterFunction`/`RegisterType` calls (what `demo_nyx` needed for `Log`/`Tick`). The
+  bridge specialization itself (`NyxBridge<Application>`) is still `.cpp`-local — a consumer
+  needing a shorter-lived or repeated mount (rather than this module's single
+  process-lifetime `NyxRuntime`) still needs to re-declare it, unchanged from before.
+- **Migrating `demo/main.cpp` or `pharos-proto/src/main.cpp` to `Penumbra/EntryPoint.h`.**
+  Same scoping as the base-class entry above — this ships the mechanism, not a migration of
+  either existing app onto it.
 
 ### Fixed 2026-08-10: `Box` had no main-axis space-distribution (`justify-content`) concept — only sequential packing from the start
 

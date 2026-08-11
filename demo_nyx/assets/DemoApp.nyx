@@ -1,0 +1,21 @@
+// Penumbra's Nyx-bridge mini demo: this whole Application is defined here, in
+// script, not in C++. DemoApp's C++ host (demo_nyx/main.cpp) only registers a
+// couple of callbacks (Log/Tick) and loads this file -- window construction,
+// the frame loop, and this class's own lifecycle are entirely owned by
+// Penumbra::Application (Penumbra/Application.h), reached through
+// nyx-proto's RegisterInheritableType/NyxBridge mechanism
+// (Penumbra/Nyx/ApplicationBridge.h).
+class DemoApplication : Application {
+    bool OnStart() override {
+        Log("OnStart: DemoApplication is alive, running inside Penumbra::Application::Run()");
+        return true;
+    }
+
+    void OnUpdate(float deltaTime) override {
+        Tick(deltaTime);
+    }
+
+    void OnShutdown() override {
+        Log("OnShutdown: DemoApplication tearing down");
+    }
+}
