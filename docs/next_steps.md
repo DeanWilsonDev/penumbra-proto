@@ -10,6 +10,115 @@
 
 ## Open items
 
+### Open (2026-08-11): `PENUMBRA_WITH_NYX`'s own build wiring collides with a consumer's `amanuensis` target — found immediately while `pharos-proto` tried to actually consume the Nyx bridge
+
+> **Trigger:** `pharos-proto` enabled `PENUMBRA_WITH_NYX` in its own `cmake/Dependencies.cmake`
+> (`set(PENUMBRA_WITH_NYX ON CACHE BOOL "" FORCE)` before `FetchContent_MakeAvailable(penumbra)`)
+> to consume exactly the capability the "Nyx bridge + entry point mechanism" entry below just
+> shipped — the very next step after that entry's own "What this unblocks" paragraph. It
+> doesn't build. Not a `pharos-proto`-side mistake: traced to this option's own CMake wiring
+> here, confirmed against real source on both sides, not guessed.
+> **Status:** blocking. `pharos-proto`'s own CLAUDE.md forbids hacking around a missing/broken
+> Penumbra capability in application code ("record the ask... then stop"), so this is filed
+> here rather than worked around there — `pharos-proto`'s own `cmake/Dependencies.cmake`
+> changes attempting to enable this option have been reverted, not left in a broken state.
+
+**Symptom, reproduced two ways in `pharos-proto`'s own build (which already has its own
+`amanuensis` target, declared by `iris-proto`'s vendored `libs/amanuensis`):**
+
+1. With `pharos-proto`'s existing fetch order unchanged (`penumbra` fetched before `iris`):
+   configure succeeds silently, but `iris-proto`'s own sources then fail to compile —
+   `fatal error: 'amanuensis/json.hpp' file not found` (`IrisConfig.cpp`, `IrisIr.cpp`,
+   `IrisIrDocument.cpp`).
+2. Reordering `pharos-proto`'s own fetches so `iris` runs first instead (to make its
+   self-guarded `amanuensis` target win first): configure itself now hard-fails —
+   `CMakeLists.txt:16 (add_library): add_library cannot create target "amanuensis" because
+   another target with the same name already exists.`
+
+**Root cause, traced through real source on both sides:**
+
+This repo's own `CMakeLists.txt` (`PENUMBRA_WITH_NYX` block) does:
+
+```
+add_subdirectory(${nyx_SOURCE_DIR}/external/firefly ${CMAKE_CURRENT_BINARY_DIR}/_deps/firefly-build)
+```
+
+running Firefly's own full `CMakeLists.txt`, which itself unconditionally does
+`add_subdirectory(external/amanuensis)` — no `if(TARGET amanuensis)` guard of any kind. Two
+things compound to make this actually break, not just theoretically risky:
+
+- `amanuensis`'s own `CMakeLists.txt` self-guards (`if(TARGET amanuensis) return() endif()`)
+  in its *current* form — but the specific copy nested inside `nyx-proto`'s vendored Firefly,
+  at whatever commit `nyx-proto`'s own `external/firefly` submodule pin points to
+  (`ebb5d80` as of this writing), does **not** have that guard — confirmed by reading
+  `build/_deps/nyx-src/external/firefly/external/amanuensis/CMakeLists.txt` directly in
+  `pharos-proto`'s own build tree: a bare `add_library(amanuensis STATIC ...)`, no guard.
+  Firefly's own *current* `main` (commit `5e1bad3`, checked directly in the sibling
+  `~/development/projects/firefly` checkout) already bumped its own `amanuensis` submodule pin
+  to `60ff233`, which does have the guard — so `nyx-proto`'s own vendored Firefly pin is stale
+  relative to Firefly's own `main`, and carries the old, unguarded copy transitively.
+- Because that specific copy is unguarded, whichever order the two `add_subdirectory(amanuensis)`
+  calls (this repo's, via Firefly; the consumer's own, e.g. `iris-proto`'s) happen to run in,
+  the result is bad: if the guarded one runs first, the second (unguarded) one hard-errors
+  (repro #2 above); if the unguarded one runs first, it silently "wins" and every consumer
+  expecting the *other* copy's headers breaks instead (repro #1 above, where `iris-proto`'s own
+  sources expected `libs/amanuensis`'s `amanuensis/json.hpp`, present in its own vendored copy
+  but not necessarily laid out identically in Firefly's differently-pinned one).
+
+This is exactly the trap `iris-proto`'s own `CMakeLists.txt` already documents and deliberately
+avoids for this identical dependency (`nyx-proto`) — its own comment reads: *"Deliberately does
+NOT add_subdirectory(libs/nyx-proto) and build nyx-proto's own CMakeLists.txt: that pulls in
+nyx-proto's own vendored Firefly/Amanuensis/Cimmerian submodules, which would define amanuensis
+and cimmerian targets a second time and collide with this repo's own libs/amanuensis and
+libs/cimmerian."* `iris-proto` instead compiles only the two specific lexer `.cpp` files it
+actually needs from `nyx-proto`, directly, never running `add_subdirectory` on the vendored tree
+at all. `pharos-proto`'s own `cmake/Dependencies.cmake` independently arrived at the same fix for
+its own (separate, top-level) `nyx-proto` dependency: populate-source-only
+(`FetchContent_Populate`, never `_MakeAvailable`/`add_subdirectory`), then compile `nyx-core`'s
+and Firefly's own specific `.cpp` files directly against a single already-declared `amanuensis`
+target — see that repo's own `cmake/Dependencies.cmake`, the `nyx`/`firefly`/`nyx-core` block,
+for a working reference implementation of exactly this pattern, already proven in that repo's
+own build. This repo's own `PENUMBRA_WITH_NYX` wiring is the one place in the whole ecosystem
+that still does the unsafe `add_subdirectory`-the-whole-vendored-tree thing instead.
+
+### Proposed fix
+
+Rework the `PENUMBRA_WITH_NYX` block in this repo's own top-level `CMakeLists.txt` to stop
+calling `add_subdirectory(${nyx_SOURCE_DIR}/external/firefly ...)` (and, by extension, never
+run `nyx-proto`'s or Firefly's own `CMakeLists.txt` at all). Populate `nyx-proto`'s source with
+`FetchContent_Populate` only, then compile the specific `nyx-core` and Firefly `.cpp` files this
+module actually needs directly into `nyx-core`/`firefly` targets here, guarding each with
+`if(NOT TARGET nyx-core)` / `if(NOT TARGET firefly)` (so a consumer that's already built its own
+copy, e.g. via `FetchContent`ing `nyx-proto` itself the way `pharos-proto` does, reuses it
+instead of re-declaring) — and reuse whatever `amanuensis` target already exists (guard the same
+way) rather than assuming this module is the only thing in the build that could have declared
+one. `pharos-proto`'s own `cmake/Dependencies.cmake` nyx/firefly/nyx-core block is a working,
+already-proven template for the exact source-file list and guard shape needed.
+
+### What this unblocks
+
+`pharos-proto`'s "Nyx-native application" window-bootstrap milestone (its own
+`docs/next_steps.md`) is otherwise fully unblocked by the "Nyx bridge + entry point mechanism"
+entry below — a standalone `pharos_nyx_bootstrap` executable was built and run successfully
+against a hand-compiled-in-place `penumbra_nyx_bridge` (not this option), proving the mechanism
+itself works end to end (a real window opened, titled "Penumbra Application", with the `.nyx`
+script's own `OnStart`/`OnUpdate`/`OnShutdown` all confirmed firing via log output) — but that
+proof was thrown away rather than kept, specifically because keeping it meant working around
+this gap in `pharos-proto`'s own application code instead of fixing it here. Once this option's
+own build wiring is safe to enable, `pharos-proto` can flip `PENUMBRA_WITH_NYX` on cleanly with
+no special-casing on its side.
+
+### Explicitly not requested
+
+- **Bumping `nyx-proto`'s own `external/firefly` submodule pin.** Would likely fix this
+  particular symptom as a side effect (Firefly's current `main` already has the guard, per
+  above), but doesn't fix the underlying fragility: relying on every transitively-vendored pin,
+  forever, happening to stay fresh enough to avoid a re-collision isn't a real fix — the
+  `add_subdirectory`-the-whole-tree approach is the actual problem, independent of any one pin's
+  freshness at any given moment.
+- **Patching `nyx-proto`'s or Firefly's own vendored `CMakeLists.txt`.** Not this repo's tree to
+  patch, and not requested here.
+
 ### Fixed 2026-08-11: `Penumbra::Application` had no window/frame-loop ownership — only a narrow `IWidgetLifecycle::OnTick` dispatcher
 
 > **Trigger:** `pharos-proto` wants to build a Nyx-driven `.nyx` application (its own
