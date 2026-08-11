@@ -92,40 +92,87 @@ if(PENUMBRA_WITH_NYX)
     endif()
 
     # Firefly (nyx-core's own logging dependency, vendored at
-    # external/firefly) guards its own test/cimmerian subdirectories behind
-    # an IS_ROOT_PROJECT check (external/firefly/CMakeLists.txt), so
-    # add_subdirectory()ing it here -- not as the CMake root -- pulls in only
-    # the `firefly` library target itself. AMANUENSIS_BUILD_TESTS OFF for the
-    # same reason nyx-proto's own top-level CMakeLists.txt forces it off
-    # before this same add_subdirectory call: Amanuensis's own test suite
-    # (which vendors its own copy of Cimmerian) is unwanted here, and nothing
-    # else in this build declares an `amanuensis` target first (unlike
-    # pharos-proto, which already gets one from `iris` and has to work around
-    # the collision -- not a concern here).
-    set(AMANUENSIS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    add_subdirectory(${nyx_SOURCE_DIR}/external/firefly ${CMAKE_CURRENT_BINARY_DIR}/_deps/firefly-build)
+    # external/firefly) and Amanuensis (Firefly's own private JSON
+    # dependency, vendored two levels deep at
+    # external/firefly/external/amanuensis) are compiled directly from their
+    # own source lists below instead of add_subdirectory()ing their vendored
+    # trees -- NOT running their CMakeLists.txt at all, on purpose.
+    #
+    # add_subdirectory(external/firefly) previously ran Firefly's own
+    # CMakeLists.txt, which unconditionally add_subdirectory()s its own
+    # external/amanuensis with no `if(TARGET amanuensis)` guard at whatever
+    # commit nyx-proto's own submodule pin happened to point to. A consumer
+    # that already has its own `amanuensis` target declared before pulling
+    # in Penumbra (pharos-proto, via iris-proto's vendored copy) hit a hard
+    # `add_library` name collision or silently got the wrong copy's headers
+    # depending on fetch order -- see docs/next_steps.md's "PENUMBRA_WITH_NYX's
+    # own build wiring collides with a consumer's amanuensis target" entry
+    # for the full incident. iris-proto's own CMakeLists.txt already
+    # documents and avoids this identical trap for its own nyx-proto
+    # dependency by never add_subdirectory()ing the vendored tree either --
+    # this mirrors that approach one dependency further down.
+    #
+    # Each target below is guarded with `if(NOT TARGET ...)` so a consumer
+    # that's already declared amanuensis/firefly/nyx-core itself (from its
+    # own, possibly differently-vendored copy) wins and gets reused here
+    # instead of a second, colliding declaration -- whichever copy is
+    # declared first in the whole build is the one everyone links against.
+    if(NOT TARGET amanuensis)
+        add_library(amanuensis STATIC
+            ${nyx_SOURCE_DIR}/external/firefly/external/amanuensis/src/json.cpp
+            ${nyx_SOURCE_DIR}/external/firefly/external/amanuensis/src/io/reader.cpp
+            ${nyx_SOURCE_DIR}/external/firefly/external/amanuensis/src/io/writer.cpp
+            ${nyx_SOURCE_DIR}/external/firefly/external/amanuensis/src/io/writer-context.cpp
+            ${nyx_SOURCE_DIR}/external/firefly/external/amanuensis/src/io/parser.cpp
+            ${nyx_SOURCE_DIR}/external/firefly/external/amanuensis/src/serialization/serialization.cpp
+            ${nyx_SOURCE_DIR}/external/firefly/external/amanuensis/src/converter.cpp
+            ${nyx_SOURCE_DIR}/external/firefly/external/amanuensis/src/ordered-map.cpp
+            ${nyx_SOURCE_DIR}/external/firefly/external/amanuensis/src/value-traits.cpp)
+        target_include_directories(amanuensis PUBLIC
+            ${nyx_SOURCE_DIR}/external/firefly/external/amanuensis/include)
+        target_compile_features(amanuensis PUBLIC cxx_std_20)
+    endif()
+
+    if(NOT TARGET firefly)
+        add_library(firefly STATIC
+            ${nyx_SOURCE_DIR}/external/firefly/src/logger.cpp
+            ${nyx_SOURCE_DIR}/external/firefly/src/log-registry.cpp
+            ${nyx_SOURCE_DIR}/external/firefly/src/sinks/plain-text-sink.cpp
+            ${nyx_SOURCE_DIR}/external/firefly/src/sinks/json-sink.cpp
+            ${nyx_SOURCE_DIR}/external/firefly/src/sinks/ndjson-sink.cpp
+            ${nyx_SOURCE_DIR}/external/firefly/src/sinks/csv-sink.cpp)
+        target_include_directories(firefly PUBLIC ${nyx_SOURCE_DIR}/external/firefly/include)
+        target_compile_features(firefly PUBLIC cxx_std_20)
+        target_precompile_headers(firefly PRIVATE ${nyx_SOURCE_DIR}/external/firefly/include/pch.hpp)
+        target_link_libraries(firefly PRIVATE amanuensis)
+    endif()
 
     # nyx-core itself -- same source list as nyx-proto/CMakeLists.txt's own
     # `nyx-core` target. Built at C++26 (nyx-proto's own required standard),
     # independent of Penumbra's own CMAKE_CXX_STANDARD 20; consuming TUs
     # (src/Penumbra/Nyx/ApplicationBridge.cpp) include nyx-core's public
     # headers at Penumbra's own standard without issue, same as
-    # pharos-proto's own C++20 code consuming the same headers.
-    add_library(nyx-core STATIC
-        ${nyx_SOURCE_DIR}/src/lexer/token.cpp
-        ${nyx_SOURCE_DIR}/src/lexer/lexer.cpp
-        ${nyx_SOURCE_DIR}/src/parser/parser.cpp
-        ${nyx_SOURCE_DIR}/src/runtime/value.cpp
-        ${nyx_SOURCE_DIR}/src/runtime/environment.cpp
-        ${nyx_SOURCE_DIR}/src/interpreter/decl-registry.cpp
-        ${nyx_SOURCE_DIR}/src/interpreter/interpreter.cpp
-        ${nyx_SOURCE_DIR}/src/host/logging.cpp
-        ${nyx_SOURCE_DIR}/src/host/stub-types.cpp)
-    target_include_directories(nyx-core PUBLIC ${nyx_SOURCE_DIR}/src)
-    target_link_libraries(nyx-core PRIVATE firefly)
-    set_target_properties(nyx-core PROPERTIES
-        CXX_STANDARD 26
-        CXX_STANDARD_REQUIRED ON)
+    # pharos-proto's own C++20 code consuming the same headers. Guarded like
+    # amanuensis/firefly above, in case a consumer already declared its own
+    # nyx-core target (e.g. by FetchContent-ing nyx-proto itself directly,
+    # the way pharos-proto's own cmake/Dependencies.cmake does).
+    if(NOT TARGET nyx-core)
+        add_library(nyx-core STATIC
+            ${nyx_SOURCE_DIR}/src/lexer/token.cpp
+            ${nyx_SOURCE_DIR}/src/lexer/lexer.cpp
+            ${nyx_SOURCE_DIR}/src/parser/parser.cpp
+            ${nyx_SOURCE_DIR}/src/runtime/value.cpp
+            ${nyx_SOURCE_DIR}/src/runtime/environment.cpp
+            ${nyx_SOURCE_DIR}/src/interpreter/decl-registry.cpp
+            ${nyx_SOURCE_DIR}/src/interpreter/interpreter.cpp
+            ${nyx_SOURCE_DIR}/src/host/logging.cpp
+            ${nyx_SOURCE_DIR}/src/host/stub-types.cpp)
+        target_include_directories(nyx-core PUBLIC ${nyx_SOURCE_DIR}/src)
+        target_link_libraries(nyx-core PRIVATE firefly)
+        set_target_properties(nyx-core PROPERTIES
+            CXX_STANDARD 26
+            CXX_STANDARD_REQUIRED ON)
+    endif()
 
     add_library(penumbra_nyx_bridge STATIC
         src/Penumbra/Nyx/ApplicationBridge.cpp)

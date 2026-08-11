@@ -10,18 +10,16 @@
 
 ## Open items
 
-### Open (2026-08-11): `PENUMBRA_WITH_NYX`'s own build wiring collides with a consumer's `amanuensis` target — found immediately while `pharos-proto` tried to actually consume the Nyx bridge
+### Fixed 2026-08-11: `PENUMBRA_WITH_NYX`'s own build wiring collided with a consumer's `amanuensis` target — found immediately while `pharos-proto` tried to actually consume the Nyx bridge
 
 > **Trigger:** `pharos-proto` enabled `PENUMBRA_WITH_NYX` in its own `cmake/Dependencies.cmake`
 > (`set(PENUMBRA_WITH_NYX ON CACHE BOOL "" FORCE)` before `FetchContent_MakeAvailable(penumbra)`)
 > to consume exactly the capability the "Nyx bridge + entry point mechanism" entry below just
 > shipped — the very next step after that entry's own "What this unblocks" paragraph. It
-> doesn't build. Not a `pharos-proto`-side mistake: traced to this option's own CMake wiring
+> didn't build. Not a `pharos-proto`-side mistake: traced to this option's own CMake wiring
 > here, confirmed against real source on both sides, not guessed.
-> **Status:** blocking. `pharos-proto`'s own CLAUDE.md forbids hacking around a missing/broken
-> Penumbra capability in application code ("record the ask... then stop"), so this is filed
-> here rather than worked around there — `pharos-proto`'s own `cmake/Dependencies.cmake`
-> changes attempting to enable this option have been reverted, not left in a broken state.
+> **Status:** fixed. This repo's own `PENUMBRA_WITH_NYX` block in `CMakeLists.txt` no longer
+> `add_subdirectory()`s Firefly's vendored tree — see "Fix applied" below.
 
 **Symptom, reproduced two ways in `pharos-proto`'s own build (which already has its own
 `amanuensis` target, declared by `iris-proto`'s vendored `libs/amanuensis`):**
@@ -81,19 +79,24 @@ for a working reference implementation of exactly this pattern, already proven i
 own build. This repo's own `PENUMBRA_WITH_NYX` wiring is the one place in the whole ecosystem
 that still does the unsafe `add_subdirectory`-the-whole-vendored-tree thing instead.
 
-### Proposed fix
+### Fix applied
 
-Rework the `PENUMBRA_WITH_NYX` block in this repo's own top-level `CMakeLists.txt` to stop
-calling `add_subdirectory(${nyx_SOURCE_DIR}/external/firefly ...)` (and, by extension, never
-run `nyx-proto`'s or Firefly's own `CMakeLists.txt` at all). Populate `nyx-proto`'s source with
-`FetchContent_Populate` only, then compile the specific `nyx-core` and Firefly `.cpp` files this
-module actually needs directly into `nyx-core`/`firefly` targets here, guarding each with
-`if(NOT TARGET nyx-core)` / `if(NOT TARGET firefly)` (so a consumer that's already built its own
-copy, e.g. via `FetchContent`ing `nyx-proto` itself the way `pharos-proto` does, reuses it
-instead of re-declaring) — and reuse whatever `amanuensis` target already exists (guard the same
-way) rather than assuming this module is the only thing in the build that could have declared
-one. `pharos-proto`'s own `cmake/Dependencies.cmake` nyx/firefly/nyx-core block is a working,
-already-proven template for the exact source-file list and guard shape needed.
+`nyx-proto`'s own `external/firefly` submodule pin was first bumped `ebb5d80` → `5e1bad3`
+(picking up Firefly's own guarded `amanuensis` copy) — masks the immediate symptom, but per the
+analysis above doesn't fix the underlying fragility on its own, so the real fix was also applied:
+the `PENUMBRA_WITH_NYX` block in this repo's own top-level `CMakeLists.txt` no longer calls
+`add_subdirectory(${nyx_SOURCE_DIR}/external/firefly ...)` — it never runs `nyx-proto`'s or
+Firefly's own `CMakeLists.txt` at all now. `nyx-proto`'s source is still populated via
+`FetchContent_Populate` only; the specific `amanuensis`, `firefly`, and `nyx-core` `.cpp` files
+this module needs are compiled directly into their own targets here instead, each guarded with
+`if(NOT TARGET amanuensis)` / `if(NOT TARGET firefly)` / `if(NOT TARGET nyx-core)` — so a
+consumer that's already declared any of these itself (e.g. `pharos-proto` via `iris-proto`'s
+vendored `amanuensis`, or by `FetchContent`ing `nyx-proto` directly the way `pharos-proto` does
+for `nyx-core`) reuses that existing target instead of colliding with a second declaration.
+`pharos-proto`'s own `cmake/Dependencies.cmake` nyx/firefly/nyx-core block was the working
+reference implementation this pattern was copied from. Verified with a full clean rebuild of
+both `build` (`PENUMBRA_WITH_NYX` off, unaffected) and `build-nyx` (`PENUMBRA_WITH_NYX` on) —
+`amanuensis`, `firefly`, `nyx-core`, `penumbra_nyx_bridge`, and `penumbra_demo_nyx` all build.
 
 ### What this unblocks
 
@@ -104,20 +107,9 @@ against a hand-compiled-in-place `penumbra_nyx_bridge` (not this option), provin
 itself works end to end (a real window opened, titled "Penumbra Application", with the `.nyx`
 script's own `OnStart`/`OnUpdate`/`OnShutdown` all confirmed firing via log output) — but that
 proof was thrown away rather than kept, specifically because keeping it meant working around
-this gap in `pharos-proto`'s own application code instead of fixing it here. Once this option's
-own build wiring is safe to enable, `pharos-proto` can flip `PENUMBRA_WITH_NYX` on cleanly with
-no special-casing on its side.
-
-### Explicitly not requested
-
-- **Bumping `nyx-proto`'s own `external/firefly` submodule pin.** Would likely fix this
-  particular symptom as a side effect (Firefly's current `main` already has the guard, per
-  above), but doesn't fix the underlying fragility: relying on every transitively-vendored pin,
-  forever, happening to stay fresh enough to avoid a re-collision isn't a real fix — the
-  `add_subdirectory`-the-whole-tree approach is the actual problem, independent of any one pin's
-  freshness at any given moment.
-- **Patching `nyx-proto`'s or Firefly's own vendored `CMakeLists.txt`.** Not this repo's tree to
-  patch, and not requested here.
+this gap in `pharos-proto`'s own application code instead of fixing it here. Now that this
+option's own build wiring is safe to enable, `pharos-proto` can flip `PENUMBRA_WITH_NYX` on
+cleanly with no special-casing on its side.
 
 ### Fixed 2026-08-11: `Penumbra::Application` had no window/frame-loop ownership — only a narrow `IWidgetLifecycle::OnTick` dispatcher
 
