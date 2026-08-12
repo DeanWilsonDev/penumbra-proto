@@ -7,6 +7,7 @@
 #include "Penumbra/Render/Renderer.h"
 #include "Penumbra/Render/SdlTtfFontBackend.h"
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -83,6 +84,18 @@ public:
     // font handles itself.
     virtual void OnDpiScaleChanged(float NewDpiScaleFactor) {}
 
+    // Host-supplied alternative to overriding OnRender(). Takes priority over the
+    // virtual OnRender() when set (Run()'s frame loop checks HasRenderHook()
+    // first). Exists for callers that only hold an Application* obtained from
+    // Penumbra::Nyx::LoadApplication/LoadApplicationFromFile -- a Nyx-authored
+    // subclass can't override OnRender() itself (not bridgeable, see
+    // Penumbra/Nyx/ApplicationBridge.h), but the C++ host loading it can still
+    // draw by calling SetOnRenderHook directly on the returned pointer, no
+    // subclassing point needed. Works identically for a plain C++ subclass too.
+    using RenderHook = std::function<void(Render::Renderer&)>;
+    void                     SetOnRenderHook(RenderHook Hook);
+    [[nodiscard]] bool       HasRenderHook() const;
+
 protected:
     // Fills Config before the window/renderer are constructed. Not bridged to
     // Nyx (see the public block above): ApplicationConfig& isn't a
@@ -109,6 +122,7 @@ private:
     Platform::InputState      Input;
     float                     LastKnownDpiScaleFactor{1.0f};
     bool                      QuitRequested{false};
+    RenderHook                OnRenderHookFn;
 
     std::vector<IWidgetLifecycle*> RegisteredLifecycles;
 };

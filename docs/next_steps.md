@@ -6,9 +6,112 @@
 > this kind in this repo (previously used `docs/*_requirements.md`, one
 > file per investigation, still present as historical record — not
 > migrated into here retroactively).
-> Last updated: 2026-08-11.
+> Last updated: 2026-08-12.
 
 ## Open items
+
+### Fixed 2026-08-12: a `LoadApplicationFromFile`-bootstrapped `Application` has no way to actually draw anything — picking up the "real, load-bearing gap" flagged in the Nyx-bridge entry below
+
+> **Trigger:** `pharos-proto`'s "Nyx-native application" effort (its own `docs/next_steps.md`)
+> reached the point where its `.nyx`-driven app, `pharos_nyx_bootstrap`, computes a real
+> treemap layout every run (`NyxTree::ComputeTreemap`, a native Nyx `TreeNode`/`TreeBuilder`)
+> and logs `NativeSquarifiedTreemap produced 248 rects` — but nothing puts those rects on
+> screen. This is exactly the gap the "Fixed 2026-08-11: Nyx bridge + entry point mechanism"
+> entry below already named and deliberately deferred: "a real, load-bearing gap for
+> `pharos-proto`'s actual 'own window bootstrap' milestone, left for whoever picks that up
+> next to design deliberately rather than guessed at here." This is that pickup, from
+> `pharos-proto`.
+
+**Root cause, confirmed directly against this repo's current source (not guessed):**
+
+- `include/Penumbra/Application.h:94`: `virtual void OnRender(Render::Renderer& Renderer) {}`
+  stays `protected`, and its C++ default is a no-op — unchanged since the entry below already
+  established this can't be bridged to Nyx script (`nyx-proto`'s `marshal.hpp` only marshals
+  primitives/`void`, not a reference type like `Render::Renderer&`; a `nyx-proto` change, out
+  of scope here, and this new entry doesn't ask for that either — see below).
+- `src/Penumbra/Nyx/ApplicationBridge.cpp:15-42`: the `NyxBridge<Penumbra::Application>`
+  specialization overrides exactly four hooks — `OnStart`, `OnUpdate`, `OnShutdown`,
+  `OnDpiScaleChanged` — each `Invoke`-ing a Nyx-side override when one exists, falling back to
+  `Application`'s real C++ default otherwise. It never overrides `OnRender` at all, so
+  `Application::OnRender`'s no-op default is what actually runs, unconditionally, for every
+  Nyx-bootstrapped app.
+- `LoadApplication` (`ApplicationBridge.cpp:73-97`) and `LoadApplicationFromFile`
+  (`:99-109`) construct the `NyxBridge<Application>` instance internally
+  (`Host.Runtime.MountBridged<Application>(...)`) and hand back a plain `Application*`
+  (`ApplicationBridge.h:38-44`) — the caller (e.g. `pharos_nyx_bootstrap`'s own `main.cpp`,
+  which only calls `Penumbra::Nyx::LoadApplicationFromFile` and returns the result from
+  `CreateApplication()`) has no subclassing point to supply its own `OnRender` override onto
+  that already-constructed object. There is today no way at all — Nyx-side or host-C++-side —
+  for a `LoadApplicationFromFile`-returned `Application*` to draw anything.
+
+**Why this is narrower than "bridge `OnRender` to Nyx"**: Nyx doesn't need to draw anything
+itself for `pharos-proto`'s milestone — it only needs to keep computing data, which already
+works end to end (`ComputeTreemap`'s real rects, logged and verified). What's missing is a
+*host*-side way in: `pharos_nyx_bootstrap`'s own `main.cpp` already has everything it needs to
+draw (the computed rects, held in its own `GTree` global) — it just has no hook that runs
+during the frame's render pass to do it with.
+
+### What shipped
+
+Put the hook on `Application` itself, not the bridge — no change to `ApplicationBridge.h`/
+`.cpp`, `LoadApplication`/`LoadApplicationFromFile`'s signatures, or the Nyx registration, as
+predicted: `NyxBridge<Application>` already *is-a* `Application`
+(`ApplicationBridge.cpp:16`) and never overrides `OnRender`, so the new behavior on
+`Application::OnRender`'s call site is inherited by every Nyx-bootstrapped app for free.
+
+`include/Penumbra/Application.h`: `using RenderHook = std::function<void(Render::Renderer&)>;`,
+a public `void SetOnRenderHook(RenderHook Hook)` / `[[nodiscard]] bool HasRenderHook() const`
+pair (declared alongside the four Nyx-bridged hooks, not the `protected` `OnRender` block —
+the whole point is a caller that only holds an `Application*` from `LoadApplicationFromFile`
+needs public access to set it), and a private `RenderHook OnRenderHookFn` member.
+`SetOnRenderHook` is `void`, not chaining-return — `Application*` isn't a builder, and a
+return value here would just invite chained calls that don't read as anything meaningful.
+`HasRenderHook()` is the public query pattern (mirrors `Get*` accessors already on
+`Application`) rather than exposing the stored `RenderHook` itself.
+
+`src/Penumbra/Application.cpp`: `Run()`'s frame loop now checks `HasRenderHook()` first —
+
+```cpp
+Renderer.BeginFrame(Config.ClearColor);
+if (HasRenderHook()) {
+    OnRenderHookFn(Renderer);
+} else {
+    OnRender(Renderer); // unchanged virtual dispatch — plain C++ subclasses still override this
+}
+Renderer.EndFrameAndPresent();
+```
+
+— falling back to the untouched virtual `OnRender()` dispatch when no hook is set, so ordinary
+C++ subclasses (`demo/main.cpp`-style apps) are unaffected. `SetOnRenderHook`/`HasRenderHook`
+themselves are two one-line definitions in the same file.
+
+Verified two ways: `cmake --build` (library + `penumbra_demo`) stays clean, zero new warnings.
+Then a standalone scratch program (this repo's usual verification precedent, no automated
+widget test suite) subclassing `Application`, run under `SDL_VIDEODRIVER=dummy`, driven for
+three frames via `RequestQuit()` from `OnUpdate`: with no hook set, the subclass's overridden
+`OnRender` fired all three times and `HasRenderHook()` read `false` throughout; with
+`SetOnRenderHook` called before `Run()`, the hook fired all three times and the subclass's
+`OnRender` override fired zero times — confirming the hook actually takes priority over virtual
+dispatch, not just that both compile.
+
+### What this unblocks
+
+`pharos-proto`'s `pharos_nyx_bootstrap` can now call `SetOnRenderHook` on the `Application*`
+`LoadApplicationFromFile` already returns, with a lambda that reads its own `GTree` (already
+holds the computed rects after `ComputeLayout`) and issues real `Renderer::` draw calls — the
+last piece needed to actually see the loaded tree on screen, rather than just a log line
+reporting a rect count. Didn't touch `nyx-proto` at all.
+
+### Explicitly not requested
+
+- **Bridging `OnRender(Render::Renderer&)` to Nyx script itself.** Still structurally blocked
+  on `nyx-proto/src/host/marshal.hpp` only marshalling primitives/`void` (confirmed in the
+  entry below) — unchanged, and not what this ask needs anyway, since Nyx only has to compute
+  data, not draw it.
+- **A 2D drawing API exposed to Nyx.** Same reasoning — the host C++ side already knows how to
+  draw via `Renderer::`; nothing here asks Nyx to gain drawing primitives of its own.
+- **Bridging `Configure(ApplicationConfig&)`.** Unrelated to rendering; left exactly as the
+  entry below already scoped it.
 
 ### Fixed 2026-08-11: `PENUMBRA_WITH_NYX`'s own build wiring collided with a consumer's `amanuensis` target — found immediately while `pharos-proto` tried to actually consume the Nyx bridge
 

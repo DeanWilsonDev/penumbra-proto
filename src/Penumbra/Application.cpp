@@ -1,6 +1,7 @@
 #include "Penumbra/Application.h"
 
 #include <algorithm>
+#include <utility>
 
 namespace Penumbra {
 
@@ -40,7 +41,11 @@ int Application::Run() {
         OnUpdate(Input.DeltaTimeSeconds);
 
         Renderer.BeginFrame(Config.ClearColor);
-        OnRender(Renderer);
+        if (HasRenderHook()) {
+            OnRenderHookFn(Renderer);
+        } else {
+            OnRender(Renderer);
+        }
         Renderer.EndFrameAndPresent();
     }
 
@@ -51,6 +56,14 @@ int Application::Run() {
 
 void Application::RequestQuit() {
     QuitRequested = true;
+}
+
+void Application::SetOnRenderHook(RenderHook Hook) {
+    OnRenderHookFn = std::move(Hook);
+}
+
+bool Application::HasRenderHook() const {
+    return static_cast<bool>(OnRenderHookFn);
 }
 
 void Application::RegisterLifecycle(IWidgetLifecycle* Lifecycle) {
