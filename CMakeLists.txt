@@ -156,6 +156,13 @@ if(PENUMBRA_WITH_NYX)
     # amanuensis/firefly above, in case a consumer already declared its own
     # nyx-core target (e.g. by FetchContent-ing nyx-proto itself directly,
     # the way pharos-proto's own cmake/Dependencies.cmake does).
+    #
+    # Source list bumped to add interpreter/resolver.cpp alongside nyx-proto's e28c957
+    # (decision-log.md §8.7/§8.8's field-slot-caching fix): Interpreter's ctor now
+    # unconditionally calls the new ResolveFieldNames, so omitting this file was a link
+    # error for penumbra_demo_nyx (and any other consumer, since this target usually wins
+    # the `if(NOT TARGET nyx-core)` race over a consumer's own copy -- see pharos-proto's
+    # cmake/Dependencies.cmake, which hit the identical gap and applied the identical fix).
     if(NOT TARGET nyx-core)
         add_library(nyx-core STATIC
             ${nyx_SOURCE_DIR}/src/lexer/token.cpp
@@ -164,6 +171,7 @@ if(PENUMBRA_WITH_NYX)
             ${nyx_SOURCE_DIR}/src/runtime/value.cpp
             ${nyx_SOURCE_DIR}/src/runtime/environment.cpp
             ${nyx_SOURCE_DIR}/src/interpreter/decl-registry.cpp
+            ${nyx_SOURCE_DIR}/src/interpreter/resolver.cpp
             ${nyx_SOURCE_DIR}/src/interpreter/interpreter.cpp
             ${nyx_SOURCE_DIR}/src/host/logging.cpp
             ${nyx_SOURCE_DIR}/src/host/stub-types.cpp)
