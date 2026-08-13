@@ -10,6 +10,121 @@
 
 ## Open items
 
+### Fixed 2026-08-13: a `LoadApplicationFromFile`-bootstrapped `Application` has no way to reach the current DPI scale factor — blocked mounting the real `.irisx` UI tree, not just a bare native panel
+
+> **Trigger:** picking up where the `IFontBackend`/`InputState` entries below left off —
+> `pharos-proto`'s "Nyx-native application" effort has now mounted native, hand-wired ports of
+> all four panels (Toolbar/Explorer/Atlas/Inspector) inside `pharos_nyx_bootstrap`, using the
+> already-shipped `SetOnUpdateHook`/`SetOnRenderHook`/`GetFontBackend()`. The next milestone the
+> user picked is the one those hooks were originally filed to eventually reach: mount the real
+> `.irisx`-authored UI tree (`src/ui/nyx/App.irisx`, via `Iris::IrisNyxDriver` +
+> `PenumbraUiBackend::BuildContext`) inside `pharos_nyx_bootstrap`'s own Nyx-owned window,
+> replacing the four bare native panels — the same tree the separate, already-complete "Nyx
+> integration" effort already mounts inside the hand-rolled `src/main.cpp` host app. Traced how
+> far that gets with `Application`'s current public surface before concluding it needs another
+> upstream ask, per `CLAUDE.md`'s "one rule that matters most here."
+
+**Root cause, confirmed directly against this repo's current source (not guessed):**
+
+- `include/Penumbra/Application.h:133-136`: `GetWindow()`, `GetRenderer()`, `GetInput()`, and
+  `GetConfig()` are still `protected` — unchanged since the `InputState` entry below explicitly
+  declined to widen them ("nothing currently needs them from outside the class"). That's no
+  longer true for `GetRenderer()` specifically: it's the only place `Renderer::GetDpiScaleFactor()`
+  lives (`include/Penumbra/Render/Renderer.h:142`), and nothing else exposes the current DPI
+  scale to a caller with no subclassing point.
+- `SetOnUpdateHook`'s `UpdateHook` alias (`Application.h:109`) is
+  `std::function<void(float, const Platform::InputState&)>` — no DPI scale parameter. This is
+  exactly the hook `pharos_nyx_bootstrap` uses to lazily build panels and load fonts
+  (`PenumbraUiBackend::BuildContext::Font`, a `FontHandle` loaded via
+  `IFontBackend::LoadFont(path, size, dpiScaleFactor)`), so it's the phase that actually needs
+  the value.
+- `src/Penumbra/Application.cpp:29-37` (`Run()`'s frame loop), confirmed the value *is* already
+  correct and available internally every frame, just not surfaced:
+  ```cpp
+  const float CurrentDpiScaleFactor = Window.GetDpiScaleFactor();
+  Renderer.SetDpiScaleFactor(CurrentDpiScaleFactor);
+  if (CurrentDpiScaleFactor != LastKnownDpiScaleFactor) {
+      LastKnownDpiScaleFactor = CurrentDpiScaleFactor;
+      OnDpiScaleChanged(CurrentDpiScaleFactor);
+  }
+  ```
+  This runs *before* either `SetOnUpdateHook`/`SetOnRenderHook` fires each frame, so
+  `Renderer.GetDpiScaleFactor()` is always accurate by the time a hook body runs — the value
+  just has no public accessor. `OnDpiScaleChanged(float)` (`Application.h:85`) is a public
+  *virtual*, not a hook, so it's unreachable the same way `OnUpdate`/`OnRender` were before
+  their own hooks landed — a `LoadApplicationFromFile`-only caller has no subclassing point to
+  override it from.
+- Checked whether this is actually needed, not assumed: `PenumbraUiBackend::BuildContext`
+  (`penumbra-ui-backend/include/PenumbraUiBackend/Walker.h`) only reads
+  `FontBackend`/`Font`/`Style`/`StyleApplier` — nothing from `Window` or `Renderer` directly.
+  `Renderer&` itself is already delivered per-frame via `SetOnRenderHook`, and `InputState` via
+  `SetOnUpdateHook` — DPI scale is the one remaining value a caller can't reach at all today.
+  Confirmed against `pharos-proto`'s own `src/nyx_app/main.cpp:206-208`, which currently
+  hardcodes every font load to `dpiScaleFactor=1.0f` with a comment naming this exact gap
+  ("`GetRenderer()` (the only place to learn the real one) stays protected/unreachable from
+  here"). The real host app, `src/main.cpp:80,254-271`, shows what correct behavior looks like
+  when a caller *does* own its own `Window`/`Renderer`: it re-reads
+  `window.GetDpiScaleFactor()` every frame and reloads fonts whenever it changes.
+
+### What shipped
+
+Implemented exactly as proposed — a bare accessor, not a new hook parameter, mirroring
+`GetFontBackend()`'s own precedent exactly:
+
+```cpp
+// include/Penumbra/Application.h, in the same public block GetFontBackend() already lives in
+[[nodiscard]] float GetDpiScaleFactor() const;
+```
+
+```cpp
+// src/Penumbra/Application.cpp
+float Application::GetDpiScaleFactor() const { return Renderer.GetDpiScaleFactor(); }
+```
+
+`GetWindow()`/`GetRenderer()`/`GetInput()`/`GetConfig()` stay `protected`, unchanged — only the
+one missing piece (DPI scale) is exposed, as reasoned in "Explicitly not requested" below. A
+caller still needs to re-check the value once per update-hook call to detect a change (DPI can
+change frame-to-frame, e.g. the window moving to a different-DPI display) — the same
+`CurrentDpiScaleFactor != LastKnownDpiScaleFactor` comparison `Run()` already does internally,
+now doable by a hook-based caller too since it can read the current value at all.
+
+Also wired into `pharos-proto`'s own `src/nyx_app/main.cpp:227-232` (the consumer this was
+filed for): the hardcoded `dpiScaleFactor=1.0f` in the `GToolbar`/`GBodyFont` first-frame load
+now reads `GApplication->GetDpiScaleFactor()` instead. Only the initial load is DPI-aware —
+that hook only ever builds these fonts once, so there's still no per-frame reload-on-DPI-change
+path there (unlike `src/main.cpp`'s own hand-rolled loop); left open for whoever needs that
+next, noted inline at the call site.
+
+Verified by building `libpenumbra.a` clean (`Application.cpp` recompiles, static library links
+with no errors) — confirming the widened surface doesn't collide with anything. The
+`pharos-proto` edit itself couldn't be built end-to-end in this session: `pharos-proto` tracks
+`penumbra-proto`'s `main` via `FetchContent_Declare(... GIT_TAG main)`
+(`cmake/Dependencies.cmake`), not a local path, so it only picks up this change once it's
+pushed to `main` here — noted for whoever pushes this commit.
+
+### What this unblocks
+
+`pharos_nyx_bootstrap` now loads fonts at the real DPI scale (instead of the hardcoded `1.0f`)
+and *can* detect scale changes the same way `src/main.cpp` already does by hand, once a future
+session adds the per-frame re-check — the last piece named in `pharos-proto/docs/next_steps.md`'s
+"Nyx-native application" entry blocking it from mounting the real `Iris::IrisNyxDriver`-built
+`App.irisx` tree (the actual Toolbar/Explorer/Atlas/Inspector panels, not the four bare
+hand-wired native ports it uses today) inside its own Nyx-owned window.
+
+### Explicitly not requested
+
+- **Widening `GetWindow()`/`GetInput()`/`GetConfig()` to public.** Nothing currently needs them
+  from outside the class — `Renderer&`/`InputState&` are already delivered per-frame via the
+  existing two hooks, and window size is a fixed, known `ApplicationConfig` default (per the
+  `InputState` entry below's own note). Only `GetRenderer()`'s one missing piece (DPI scale) is
+  requested here, as a narrow accessor rather than exposing `Renderer&`/`PlatformWindow&`
+  themselves.
+- **A `SetOnDpiScaleChangedHook` mirroring the protected `OnDpiScaleChanged` virtual.** Not
+  needed — a bare accessor lets a hook-based caller do the same before/after comparison `Run()`
+  already does internally, without a third hook type.
+- **Bridging DPI scale into Nyx script itself.** Host-C++-side access only, same scoping every
+  prior ask in this doc has kept.
+
 ### Fixed 2026-08-13: a `LoadApplicationFromFile`-bootstrapped `Application` has no way to reach its own `IFontBackend` — blocks building any real (text-bearing) widget tree from outside the class
 
 > **Trigger:** picking up where the just-fixed `InputState` entry below left off —

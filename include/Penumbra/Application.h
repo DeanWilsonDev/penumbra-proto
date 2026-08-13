@@ -120,6 +120,17 @@ public:
     // caller only needs it once, so a bare accessor is enough; no hook required.
     [[nodiscard]] Render::IFontBackend& GetFontBackend();
 
+    // Public for the same reason GetFontBackend() is: a caller that only holds
+    // an Application* obtained from Penumbra::Nyx::LoadApplication/
+    // LoadApplicationFromFile has no subclassing point, but still needs the
+    // current DPI scale factor to load DPI-correct fonts and detect
+    // display-DPI changes (docs/next_steps.md's "GetWindow/GetRenderer and
+    // DPI scaling" entry). Forwards to the Renderer's own scale factor, which
+    // Run() keeps synced to the window's every frame before OnDpiScaleChanged
+    // fires -- not GetWindow/GetRenderer themselves; neither is needed just
+    // for this, so neither is made public here.
+    [[nodiscard]] float GetDpiScaleFactor() const;
+
 protected:
     // Fills Config before the window/renderer are constructed. Not bridged to
     // Nyx (see the public block above): ApplicationConfig& isn't a

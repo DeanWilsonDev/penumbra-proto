@@ -108,6 +108,10 @@ Render::IFontBackend& Application::GetFontBackend() {
     return FontBackend;
 }
 
+float Application::GetDpiScaleFactor() const {
+    return Renderer.GetDpiScaleFactor();
+}
+
 const Platform::InputState& Application::GetInput() const {
     return Input;
 }
