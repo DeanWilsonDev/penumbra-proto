@@ -10,6 +10,63 @@
 
 ## Open items
 
+### Fixed 2026-08-13: a `LoadApplicationFromFile`-bootstrapped `Application` has no way to reach its own `IFontBackend` — blocks building any real (text-bearing) widget tree from outside the class
+
+> **Trigger:** picking up where the just-fixed `InputState` entry below left off —
+> `pharos-proto`'s "Nyx-native application" effort is now trying to actually mount a real
+> `Penumbra::Widgets` tree (an `Iris::IrisNyxDriver`-built Explorer panel) inside
+> `pharos_nyx_bootstrap`, using the newly-shipped `SetOnUpdateHook`/`SetOnRenderHook` pair.
+> Building that tree needs an `IFontBackend*` for text measurement
+> (`PenumbraUiBackend::BuildContext::FontBackend`) before the first frame ever runs — traced
+> how a `pharos_nyx_bootstrap`-shaped caller (an `Application*` from `LoadApplicationFromFile`,
+> no subclassing point) would reach one, and it can't.
+
+**Root cause, confirmed directly against this repo's current source (not guessed):**
+
+- `include/Penumbra/Application.h:125`: `[[nodiscard]] Render::IFontBackend&
+  GetFontBackend();` stayed `protected`, same "only reachable from within the class hierarchy"
+  problem `GetInput()` had — and `pharos_nyx_bootstrap`'s own `main.cpp` never subclasses
+  `Application` at all (it only ever holds the plain `Application*`
+  `LoadApplicationFromFile` hands back).
+- `include/Penumbra/Render/Renderer.h:166`: `Renderer`'s own `FontBackend` member is
+  `private`, no getter — so even though `SetOnRenderHook`'s lambda already receives a real
+  `Render::Renderer&` every frame, there's no way to recover the `IFontBackend*` paired with
+  it from that reference either.
+- Net effect: there was no path, hook or otherwise, for a `LoadApplicationFromFile`-only
+  caller to obtain an `IFontBackend*`/load a `FontHandle` at all.
+
+### What shipped
+
+Implemented exactly as proposed — smaller than the `InputState` fix, no new hook type needed.
+`Application.h`'s `[[nodiscard]] Render::IFontBackend& GetFontBackend();` moved out of the
+`protected:` block into the public block `SetOnRenderHook`/`SetOnUpdateHook` already live in,
+right after `HasUpdateHook()`. Unlike `OnUpdate`/`OnRender`, `Application.h` never assigned
+`FontBackend` access to a specific per-frame-cadence hook's own documented responsibility —
+it's a plain resource accessor, the same shape `GetRenderer()`/`GetWindow()` already have,
+just needed by a caller with no subclassing point. A caller only ever needs it *once* (to
+build a widget tree and load fonts, typically lazily on the first frame after
+window/renderer construction, not every frame), so a `SetOnRenderHook`-style hook parameter
+would have been over-engineering — a bare public getter is both smaller and matches what's
+actually needed. `GetWindow()`/`GetRenderer()`/`GetInput()`/`GetConfig()` stay `protected`,
+unchanged.
+
+Verified by building `libpenumbra.a` clean (`Application.cpp` — the only translation unit
+that defines `GetFontBackend()` — recompiles and the static library links with no errors),
+confirming the widened access doesn't collide with anything and the declaration/definition
+still agree.
+
+**What this unblocks:** `pharos_nyx_bootstrap` can now call `GetFontBackend()` directly on
+the `Application*` `LoadApplicationFromFile` already returns, to lazily build a real
+`Iris::IrisNyxDriver`-mounted widget tree (starting with a native-`NyxTree`-backed Explorer
+panel, `pharos-proto`'s own `docs/next_steps.md`) — the same way `SetOnUpdateHook` unblocked
+reaching `InputState` for that same tree's interaction state.
+
+**Explicitly not requested:** bridging `IFontBackend`/font loading into Nyx script itself —
+same host-C++-side-only scoping every prior ask here has kept. Not requesting `GetRenderer()`/
+`GetWindow()` be made public too — nothing currently needs them from outside the class (the
+render hook already carries `Renderer&` directly), so only the one accessor that was actually
+missing was widened here.
+
 ### Fixed 2026-08-13: a `LoadApplicationFromFile`-bootstrapped `Application` has no way to reach that frame's `InputState` — blocks mounting a real (interactive) widget tree from outside the class
 
 > **Trigger:** `pharos-proto`'s "Nyx-native application" effort (its own `docs/next_steps.md`)

@@ -110,6 +110,16 @@ public:
     void                     SetOnUpdateHook(UpdateHook Hook);
     [[nodiscard]] bool       HasUpdateHook() const;
 
+    // Public (not protected, unlike GetWindow/GetRenderer/GetInput/GetConfig
+    // below) for the same reason SetOnRenderHook/SetOnUpdateHook are: a caller
+    // that only holds an Application* obtained from Penumbra::Nyx::LoadApplication/
+    // LoadApplicationFromFile has no subclassing point, but still needs an
+    // IFontBackend* to measure text/load fonts before mounting a widget tree
+    // externally (docs/next_steps.md's "no way to reach IFontBackend" entry).
+    // Unlike the two hooks above, this isn't tied to a per-frame cadence -- a
+    // caller only needs it once, so a bare accessor is enough; no hook required.
+    [[nodiscard]] Render::IFontBackend& GetFontBackend();
+
 protected:
     // Fills Config before the window/renderer are constructed. Not bridged to
     // Nyx (see the public block above): ApplicationConfig& isn't a
@@ -122,7 +132,6 @@ protected:
 
     [[nodiscard]] Platform::PlatformWindow&   GetWindow();
     [[nodiscard]] Render::Renderer&           GetRenderer();
-    [[nodiscard]] Render::IFontBackend&       GetFontBackend();
     [[nodiscard]] const Platform::InputState& GetInput() const;
     [[nodiscard]] const ApplicationConfig&    GetConfig() const;
 
