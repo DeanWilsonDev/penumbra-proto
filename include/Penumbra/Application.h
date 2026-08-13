@@ -96,6 +96,20 @@ public:
     void                     SetOnRenderHook(RenderHook Hook);
     [[nodiscard]] bool       HasRenderHook() const;
 
+    // Host-supplied alternative to overriding OnUpdate(). Takes priority over the
+    // virtual OnUpdate() when set (Run()'s frame loop checks HasUpdateHook()
+    // first), and -- unlike OnUpdate() -- is handed this frame's InputState, which
+    // is otherwise unreachable outside Application's own member functions (GetInput()
+    // is protected). Exists for the same reason SetOnRenderHook does: a caller that
+    // only holds an Application* obtained from Penumbra::Nyx::LoadApplication/
+    // LoadApplicationFromFile has no subclassing point to reach InputState from, but
+    // still needs it to drive WidgetBase::UpdateInteractionState on a tree it mounts
+    // externally (docs/next_steps.md's "no way to reach InputState" entry). Works
+    // identically for a plain C++ subclass too.
+    using UpdateHook = std::function<void(float, const Platform::InputState&)>;
+    void                     SetOnUpdateHook(UpdateHook Hook);
+    [[nodiscard]] bool       HasUpdateHook() const;
+
 protected:
     // Fills Config before the window/renderer are constructed. Not bridged to
     // Nyx (see the public block above): ApplicationConfig& isn't a
@@ -123,6 +137,7 @@ private:
     float                     LastKnownDpiScaleFactor{1.0f};
     bool                      QuitRequested{false};
     RenderHook                OnRenderHookFn;
+    UpdateHook                OnUpdateHookFn;
 
     std::vector<IWidgetLifecycle*> RegisteredLifecycles;
 };

@@ -38,7 +38,11 @@ int Application::Run() {
         }
 
         Tick(Input.DeltaTimeSeconds);
-        OnUpdate(Input.DeltaTimeSeconds);
+        if (HasUpdateHook()) {
+            OnUpdateHookFn(Input.DeltaTimeSeconds, Input);
+        } else {
+            OnUpdate(Input.DeltaTimeSeconds);
+        }
 
         Renderer.BeginFrame(Config.ClearColor);
         if (HasRenderHook()) {
@@ -64,6 +68,14 @@ void Application::SetOnRenderHook(RenderHook Hook) {
 
 bool Application::HasRenderHook() const {
     return static_cast<bool>(OnRenderHookFn);
+}
+
+void Application::SetOnUpdateHook(UpdateHook Hook) {
+    OnUpdateHookFn = std::move(Hook);
+}
+
+bool Application::HasUpdateHook() const {
+    return static_cast<bool>(OnUpdateHookFn);
 }
 
 void Application::RegisterLifecycle(IWidgetLifecycle* Lifecycle) {

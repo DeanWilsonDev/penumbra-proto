@@ -6,9 +6,109 @@
 > this kind in this repo (previously used `docs/*_requirements.md`, one
 > file per investigation, still present as historical record — not
 > migrated into here retroactively).
-> Last updated: 2026-08-12.
+> Last updated: 2026-08-13.
 
 ## Open items
+
+### Fixed 2026-08-13: a `LoadApplicationFromFile`-bootstrapped `Application` has no way to reach that frame's `InputState` — blocks mounting a real (interactive) widget tree from outside the class
+
+> **Trigger:** `pharos-proto`'s "Nyx-native application" effort (its own `docs/next_steps.md`)
+> has reached full parity on data (load → native tree → treemap layout) and now draws the
+> result via `SetOnRenderHook` — but only as raw `Renderer::DrawFilledRect`/`DrawRectOutline`
+> calls, not real widgets. The next milestone the user picked is converging it with the
+> separate, already-complete "Nyx integration" effort: mount the real `.irisx`-authored UI tree
+> (`src/ui/nyx/App.irisx` — Explorer/Inspector/Atlas panels, toolbar, all real interactive
+> `Penumbra::Widgets`) inside `pharos_nyx_bootstrap`'s own Nyx-owned window, replacing the
+> rect-drawing lambda. Traced how far that gets with `Application`'s current public surface
+> before concluding it needs an upstream ask, per `CLAUDE.md`'s "one rule that matters most
+> here."
+
+**Root cause, confirmed directly against this repo's current source (not guessed):**
+
+- `include/Penumbra/Application.h:109-113`: `GetWindow()`, `GetRenderer()`, `GetFontBackend()`,
+  `GetInput()`, and `GetConfig()` are all `protected`. A caller that only holds the
+  `Application*` `LoadApplicationFromFile` returns (never a subclass — the Nyx script itself is
+  the "subclass," bridged via `NyxBridge<Application>`, and `pharos_nyx_bootstrap`'s own
+  `main.cpp` never derives from `Application` at all) cannot call any of these. The only public
+  surface today besides `Run`/`RequestQuit`/`RegisterLifecycle`/`UnregisterLifecycle` is the
+  `SetOnRenderHook`/`HasRenderHook` pair added for the entry above.
+- `include/Penumbra/IWidgetLifecycle.h`: `RegisterLifecycle` is public, but
+  `IWidgetLifecycle::OnTick(const TickInfo& Info)` only carries `DeltaSeconds`
+  (`Application.cpp:80-86`, `Tick()`'s own construction of `TickInfo`) — no `InputState` reaches
+  it either. There is no path today, hook or otherwise, for anything outside `Application`'s own
+  member functions to see that frame's `Platform::InputState` (mouse position, click edges, text
+  input, keys).
+- This matters specifically because mounting a real widget tree needs
+  `WidgetBase::UpdateInteractionState` called every frame with the real `InputState` (this
+  repo's own retained-mode convention — every existing Penumbra app, `pharos-proto`'s hand-rolled
+  `main.cpp` included, does this from its own owned frame loop). `pharos_nyx_bootstrap` has no
+  owned frame loop — `Application::Run()` owns it — so without some form of `InputState` access,
+  a mounted tree could be drawn (via the existing render hook) but never actually clicked,
+  hovered, or scrolled.
+- Window/viewport size is *not* part of this ask: `Configure(ApplicationConfig&)` still can't be
+  overridden from an external `Application*` or from Nyx (unchanged from the entry below —
+  `ApplicationConfig&` isn't marshallable and isn't hook-exposed either), so a
+  `LoadApplicationFromFile`-bootstrapped app's window size is always exactly
+  `ApplicationConfig`'s own defaults (`Application.h:19-23`, currently 1280×720). That's a fixed,
+  known constant a caller can already rely on without any new accessor — only `InputState` is
+  genuinely unreachable.
+
+### What shipped
+
+Implemented exactly as proposed — mirrors `SetOnRenderHook`'s own precedent exactly, same file,
+same "public hook takes priority over the protected virtual" pattern. `Application.h`:
+`using UpdateHook = std::function<void(float, const Platform::InputState&)>;`, a public
+`void SetOnUpdateHook(UpdateHook Hook)` / `[[nodiscard]] bool HasUpdateHook() const` pair
+(declared alongside `SetOnRenderHook`/`HasRenderHook`), and a private `UpdateHook
+OnUpdateHookFn` member. `Application.cpp`'s `Run()` frame loop now checks `HasUpdateHook()`
+in the same slot `OnUpdate()` already fired from, immediately after `Tick(...)`:
+
+```cpp
+Tick(Input.DeltaTimeSeconds);
+if (HasUpdateHook()) {
+    OnUpdateHookFn(Input.DeltaTimeSeconds, Input);
+} else {
+    OnUpdate(Input.DeltaTimeSeconds);
+}
+```
+
+— falling back to the untouched virtual `OnUpdate(float)` dispatch when no hook is set, so
+ordinary C++ subclasses (`demo/main.cpp`-style apps) are unaffected. Kept as its own hook
+(firing where `OnUpdate` already fires) rather than just widening `GetInput()` to `public`,
+matching `Application.h`'s own existing doc comment on `OnUpdate` ("reconcile ... Measure/
+Arrange, and update interaction state here") — the render hook's own doc comment says only
+"draw the widget tree here." A `pharos_nyx_bootstrap`-style caller uses `SetOnUpdateHook` to
+reconcile/measure/arrange/`UpdateInteractionState` its mounted tree, and the already-shipped
+`SetOnRenderHook` to draw it — the same two-phase split every other Penumbra app's own frame
+loop already has, just externalized through two hooks instead of one owned loop.
+
+Verified two ways: `cmake --build` (library + `penumbra_demo`) stays clean, zero new warnings.
+Then a standalone scratch program (this repo's usual verification precedent, no automated
+widget test suite), linked directly against `libpenumbra.a` and run under
+`SDL_VIDEODRIVER=dummy`, driven for three frames via `RequestQuit()`: with no hook set, the
+subclass's overridden `OnUpdate` fired all three times and `HasUpdateHook()` read `false`
+throughout; with `SetOnUpdateHook` called before `Run()`, the hook fired all three times (each
+call receiving a live `const InputState&`), the subclass's `OnUpdate` override fired zero
+times, and `HasUpdateHook()` read `true` — confirming the hook actually takes priority over
+virtual dispatch and reaches `InputState`, not just that both compile.
+
+### What this unblocks
+
+`pharos-proto`'s `pharos_nyx_bootstrap` can now call `SetOnUpdateHook` on the `Application*`
+`LoadApplicationFromFile` already returns, with a lambda that runs
+`WidgetBase::UpdateInteractionState` (and any reconcile/Measure/Arrange) against the real
+per-frame `InputState`, alongside the already-shipped `SetOnRenderHook` for drawing — the last
+piece needed before a real `.irisx`-authored widget tree mounted inside `pharos_nyx_bootstrap`
+can actually be clicked, hovered, or scrolled, not just drawn.
+
+### Explicitly not requested
+
+- **Bridging `InputState` (or anything else) into Nyx script itself.** This is host-C++-side
+  access only, same scoping the `SetOnRenderHook` entry above already established for
+  `Renderer&`.
+- **A `Configure`/window-size hook.** Not actually needed — window size is already a fixed,
+  known constant (`ApplicationConfig`'s own defaults) a caller can rely on without any new
+  accessor.
 
 ### Fixed 2026-08-12: a `LoadApplicationFromFile`-bootstrapped `Application` has no way to actually draw anything — picking up the "real, load-bearing gap" flagged in the Nyx-bridge entry below
 
