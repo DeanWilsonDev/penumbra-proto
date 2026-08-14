@@ -92,16 +92,23 @@ A hook-based caller drives it exactly the way `src/main.cpp` already does, just 
 
 Verified by building `libpenumbra.a` and `penumbra_demo` clean (`Application.cpp` recompiles,
 static library and demo executable both link with no errors) — confirming the widened surface
-doesn't collide with anything. Not wired into `pharos_nyx_bootstrap` itself in this session —
-same cross-repo caveat as the `GetDpiScaleFactor()` fix above: `pharos-proto` tracks this repo's
-`main` via `FetchContent_Declare(... GIT_TAG main)`, so it only picks this up once pushed here.
+doesn't collide with anything.
 
-### What this unblocks
+**2026-08-14, later the same day: wired into `pharos_nyx_bootstrap` and verified end-to-end, in
+a `pharos-proto` session.** Picked up via a plain `cmake -B build` reconfigure (no pin bump
+needed — `pharos-proto` tracks this repo's `main`). `nyx_app/main.cpp` calls
+`GApplication->SetTextInputActive(...)` once per focus-change, the same shape described above.
+Verified via `cliclick`: cleared the JSON-path field with Backspace, typed `HELLO`, and confirmed
+it was inserted at the cursor — the first time typed characters have landed in that field. See
+`pharos-proto/docs/next_steps.md`'s own "Load schema is still a button" entry for the full
+verification trace. This item is fully closed on both sides now.
+
+### What this unblocked
 
 `pharos_nyx_bootstrap`'s own `JsonPathField`-based Toolbar (already built and wired — focus,
-Enter-submit, and Load-button-click all work today) can now accept typed characters, once it
-calls `GApplication->SetTextInputActive(...)` on focus change, making its free-text JSON-path
-field actually usable for anything other than the pre-filled default path.
+Enter-submit, and Load-button-click all worked before this fix) can now accept typed characters,
+making its free-text JSON-path field fully usable for anything other than the pre-filled default
+path — confirmed above, not just theoretical.
 
 ### Explicitly not requested
 
