@@ -131,6 +131,17 @@ public:
     // for this, so neither is made public here.
     [[nodiscard]] float GetDpiScaleFactor() const;
 
+    // Public for the same reason GetFontBackend()/GetDpiScaleFactor() are: a
+    // caller that only holds an Application* obtained from
+    // Penumbra::Nyx::LoadApplication/LoadApplicationFromFile has no
+    // subclassing point, but still needs to enable SDL text-input mode for
+    // the window before typed characters reach InputState::TextInputThisFrame
+    // at all (docs/next_steps.md's "no way to enable SDL text-input mode"
+    // entry). Not tied to a per-frame cadence -- a caller only needs to call
+    // this once per focus change, matching src/main.cpp's own explicit
+    // per-frame check -- so a bare accessor is enough; no hook required.
+    void SetTextInputActive(bool Active);
+
 protected:
     // Fills Config before the window/renderer are constructed. Not bridged to
     // Nyx (see the public block above): ApplicationConfig& isn't a

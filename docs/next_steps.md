@@ -6,9 +6,112 @@
 > this kind in this repo (previously used `docs/*_requirements.md`, one
 > file per investigation, still present as historical record — not
 > migrated into here retroactively).
-> Last updated: 2026-08-13.
+> Last updated: 2026-08-14.
 
 ## Open items
+
+### Fixed 2026-08-14: a `LoadApplicationFromFile`-bootstrapped `Application` has no way to enable SDL text-input mode — a focused `TextInput`'s click/Enter/Backspace all work, but typed characters never arrive
+
+> **Trigger:** `pharos-proto`'s "Nyx-native application" effort building a real, free-text
+> `JsonPathField`-based Toolbar for `pharos_nyx_bootstrap` (its own `docs/next_steps.md`,
+> "Load schema is still a button" entry) — the last of the three real gaps that entry's own
+> 2026-08-13 review found. Confirmed empirically, not just reasoned from source: focus-claim on
+> click worked correctly (`FocusState::Focused` set to the `TextInput` on the right frame,
+> verified via `fprintf` instrumentation since reverted), Backspace/Enter/other regular keys
+> worked fine, but `cliclick t:'...'`-typed characters never once showed up in the field's own
+> `Text`, across several repeated tries with verified-correct click coordinates.
+
+**Root cause, confirmed directly against this repo's current source (not guessed):**
+
+- `include/Penumbra/Platform/InputState.h:36`: `std::string TextInputThisFrame; // from SDL
+  text-input events` — this is the *only* source `TextInput`'s own character-insertion logic
+  reads from (confirmed against `TextInput::UpdateInteractionState` reading `Input.
+  TextInputThisFrame`, not raw key codes, for literal character entry).
+- `src/Penumbra/Platform/PlatformWindow.cpp:116,131-132`: `TextInputThisFrame` is populated
+  *only* inside the `SDL_EVENT_TEXT_INPUT` case of the platform event pump:
+  ```cpp
+  OutInputState.TextInputThisFrame.clear();
+  ...
+  case SDL_EVENT_TEXT_INPUT:
+      OutInputState.TextInputThisFrame += Event.text.text;
+  ```
+  SDL3 does not deliver `SDL_EVENT_TEXT_INPUT` for a window until `SDL_StartTextInput` has been
+  called for it — text-input mode is off by default per window, unlike raw key-down/up events.
+- `src/Penumbra/Platform/PlatformWindow.cpp:181-188` is the *only* place `SDL_StartTextInput`/
+  `SDL_StopTextInput` are ever called, inside `PlatformWindow::SetTextInputActive(bool)`:
+  ```cpp
+  void PlatformWindow::SetTextInputActive(bool Active) {
+      if (Active) {
+          SDL_StartTextInput(Window);
+      } else {
+          SDL_StopTextInput(Window);
+      }
+  }
+  ```
+  `PlatformWindow::Initialise` never calls this itself (confirmed by reading it in full) — text
+  input starts permanently off for every window unless something calls `SetTextInputActive(true)`
+  explicitly.
+- `include/Penumbra/Application.h:144`: `Platform::PlatformWindow& GetWindow();` is `protected`
+  (block starts at line 134), same as `GetRenderer()`/`GetInput()`/`GetConfig()` — and
+  `Application` itself never calls `SetTextInputActive` anywhere in `src/Penumbra/Application.cpp`
+  (confirmed: no occurrence in that file at all). So a caller with no subclassing point (anyone
+  holding only the `Application*` returned by `Penumbra::Nyx::LoadApplicationFromFile`, e.g.
+  `pharos_nyx_bootstrap`) has no way to reach `SetTextInputActive` at all — not through
+  `GetWindow()` (protected), not through any hook (`SetOnUpdateHook`/`SetOnRenderHook` hand back
+  `InputState&`/`Renderer&`, neither owns this call), not through a public wrapper (none exists).
+- The real host app, `pharos-proto/src/main.cpp:313-317`, shows what correct behavior looks like
+  when a caller *does* own its own `PlatformWindow` directly:
+  ```cpp
+  const bool wantTextInput = (focus.Focused != nullptr);
+  if (wantTextInput != textInputActive) {
+      window.SetTextInputActive(wantTextInput);
+      textInputActive = wantTextInput;
+  }
+  ```
+  This path is closed to any `Application`-based app today.
+
+### What shipped
+
+Implemented exactly as proposed — a bare public wrapper, mirroring the `GetFontBackend()`/
+`GetDpiScaleFactor()` precedent exactly, `GetWindow()`/`GetRenderer()`/etc. left `protected`:
+
+```cpp
+// include/Penumbra/Application.h, in the same public block GetFontBackend()/GetDpiScaleFactor()
+// already live in
+void SetTextInputActive(bool Active);
+```
+
+```cpp
+// src/Penumbra/Application.cpp
+void Application::SetTextInputActive(bool Active) { Window.SetTextInputActive(Active); }
+```
+
+A hook-based caller drives it exactly the way `src/main.cpp` already does, just calling
+`GApplication->SetTextInputActive(...)` instead of a locally-owned `window.SetTextInputActive(...)`
+— same "call once per focus-change" shape, no new hook type needed.
+
+Verified by building `libpenumbra.a` and `penumbra_demo` clean (`Application.cpp` recompiles,
+static library and demo executable both link with no errors) — confirming the widened surface
+doesn't collide with anything. Not wired into `pharos_nyx_bootstrap` itself in this session —
+same cross-repo caveat as the `GetDpiScaleFactor()` fix above: `pharos-proto` tracks this repo's
+`main` via `FetchContent_Declare(... GIT_TAG main)`, so it only picks this up once pushed here.
+
+### What this unblocks
+
+`pharos_nyx_bootstrap`'s own `JsonPathField`-based Toolbar (already built and wired — focus,
+Enter-submit, and Load-button-click all work today) can now accept typed characters, once it
+calls `GApplication->SetTextInputActive(...)` on focus change, making its free-text JSON-path
+field actually usable for anything other than the pre-filled default path.
+
+### Explicitly not requested
+
+- **Widening `GetWindow()` to public.** Same reasoning every prior entry in this doc has kept —
+  nothing else currently needs the full `PlatformWindow&`, only this one narrow capability.
+- **IME candidate-window positioning / `SDL_SetTextInputArea`.** Out of scope — the ask here is
+  just "receive typed characters at all," not full IME composition-window support.
+- **Auto-toggling text input based on focus inside `Application::Run()` itself.** Left as the
+  caller's own responsibility (matching `src/main.cpp`'s own explicit per-frame check) rather than
+  Penumbra guessing when a widget wants text input; a bare accessor is enough.
 
 ### Fixed 2026-08-13: a `LoadApplicationFromFile`-bootstrapped `Application` has no way to reach the current DPI scale factor — blocked mounting the real `.irisx` UI tree, not just a bare native panel
 

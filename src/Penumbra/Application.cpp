@@ -112,6 +112,10 @@ float Application::GetDpiScaleFactor() const {
     return Renderer.GetDpiScaleFactor();
 }
 
+void Application::SetTextInputActive(bool Active) {
+    Window.SetTextInputActive(Active);
+}
+
 const Platform::InputState& Application::GetInput() const {
     return Input;
 }
