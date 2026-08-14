@@ -183,7 +183,8 @@ if(PENUMBRA_WITH_NYX)
     endif()
 
     add_library(penumbra_nyx_bridge STATIC
-        src/Penumbra/Nyx/ApplicationBridge.cpp)
+        src/Penumbra/Nyx/ApplicationBridge.cpp
+        src/Penumbra/Nyx/ScriptCanvas.cpp)
     target_link_libraries(penumbra_nyx_bridge PUBLIC penumbra nyx-core)
 
     # demo_nyx — mini demo proving the bridge end to end: DemoApplication
