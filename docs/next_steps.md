@@ -16,6 +16,14 @@
 > point mechanism," 2026-08-11) was never actually closed; it's condensed into the single open
 > item below rather than archived with the rest.
 
+> **2026-08-17 agent status note:** the multi-repo coordination agent assigned to this repo
+> (name "penumbra" in that experiment) was briefed on this doc and the repo's clean/up-to-date
+> `main` state, confirmed on standby, and received no ask before the fleet was retired. No work
+> was started, no files were touched, nothing is in-flight or partially done. The one open item
+> below is unchanged from the 2026-08-14 audit. This note exists only so a fresh session/agent
+> picking this doc up next has an honest record that the prior agent did nothing beyond reading
+> and reporting status.
+
 ## Open items
 
 ### `Configure(ApplicationConfig&)` and `OnRender(Render::Renderer&)` still can't be bridged to Nyx script itself — blocked on an upstream `nyx-proto` change
