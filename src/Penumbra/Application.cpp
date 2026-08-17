@@ -116,6 +116,10 @@ void Application::SetTextInputActive(bool Active) {
     Window.SetTextInputActive(Active);
 }
 
+Point Application::GetWindowLogicalSize() const {
+    return Window.GetLogicalWindowSize();
+}
+
 const Platform::InputState& Application::GetInput() const {
     return Input;
 }

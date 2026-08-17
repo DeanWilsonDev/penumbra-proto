@@ -142,6 +142,18 @@ public:
     // per-frame check -- so a bare accessor is enough; no hook required.
     void SetTextInputActive(bool Active);
 
+    // Public for the same reason GetFontBackend()/GetDpiScaleFactor() are: a
+    // caller that only holds an Application* obtained from
+    // Penumbra::Nyx::LoadApplication/LoadApplicationFromFile has no
+    // subclassing point, but still needs the live window size to Measure/
+    // Arrange its externally-mounted widget tree against something other
+    // than a compile-time guess (docs/next_steps.md's "no way to read the
+    // current window size" entry). Forwards to the window itself, the same
+    // way src/main.cpp's hand-rolled frame loop already does -- not
+    // GetWindow(), which stays protected; this is the narrow public slice of
+    // it a Nyx-loaded caller needs.
+    [[nodiscard]] Point GetWindowLogicalSize() const;
+
 protected:
     // Fills Config before the window/renderer are constructed. Not bridged to
     // Nyx (see the public block above): ApplicationConfig& isn't a

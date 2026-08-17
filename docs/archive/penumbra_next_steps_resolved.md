@@ -15,18 +15,99 @@
 > archived copy is the full original write-up for reference, not the current status.
 >
 > Contents (each section is one dated `### Fixed ...` entry from the live doc, verbatim):
-> 1. TextInput activation (2026-08-14)
-> 2. DPI scale accessor (2026-08-13)
-> 3. `GetFontBackend()` made public (2026-08-13)
-> 4. `SetOnUpdateHook`/`InputState` access (2026-08-13)
-> 5. `SetOnRenderHook`/`OnRender` hook (2026-08-12)
-> 6. `PENUMBRA_WITH_NYX`/`amanuensis` build collision (2026-08-11)
-> 7. `Application` base class + frame-loop ownership (2026-08-11)
-> 8. Nyx bridge + entry point mechanism (2026-08-11) — partially superseded, see note above
-> 9. `Box` `justify-content` (2026-08-10)
-> 10. `Box` `FixedLeadingStack` (2026-08-03)
+> 1. `GetWindowLogicalSize()` accessor (2026-08-17)
+> 2. TextInput activation (2026-08-14)
+> 3. DPI scale accessor (2026-08-13)
+> 4. `GetFontBackend()` made public (2026-08-13)
+> 5. `SetOnUpdateHook`/`InputState` access (2026-08-13)
+> 6. `SetOnRenderHook`/`OnRender` hook (2026-08-12)
+> 7. `PENUMBRA_WITH_NYX`/`amanuensis` build collision (2026-08-11)
+> 8. `Application` base class + frame-loop ownership (2026-08-11)
+> 9. Nyx bridge + entry point mechanism (2026-08-11) — partially superseded, see note above
+> 10. `Box` `justify-content` (2026-08-10)
+> 11. `Box` `FixedLeadingStack` (2026-08-03)
 
-## 1. TextInput activation (2026-08-14)
+## 1. `GetWindowLogicalSize()` accessor (2026-08-17)
+
+### Fixed 2026-08-17: a Nyx-loaded `Application*` had no way to read the current window size — every frame's Measure/Arrange was stuck on a hardcoded guess
+
+> **Trigger:** found 2026-08-17 while fixing a `pharos-proto` bug report (window resize doing
+> nothing visible; text bleeding out of the Inspector panel). The Inspector bleed was fixable in
+> `pharos-proto` alone; the resize-reflow half needed this upstream accessor first, per this
+> ecosystem's own "ask the dependency, don't hack around it" rule.
+
+**Root cause, confirmed directly against this repo's source (not guessed):**
+
+`Application` (`include/Penumbra/Application.h`) exposed `GetFontBackend()`, `GetDpiScaleFactor()`,
+and `SetTextInputActive(bool)` as public members specifically so a caller that only holds an
+`Application*` from `Penumbra::Nyx::LoadApplication`/`LoadApplicationFromFile` — no subclassing
+point, since the Nyx script itself is the subclass — can still reach them. `GetWindow()`/
+`GetRenderer()`, where the live window size actually lives (`Platform::PlatformWindow`), stayed
+`protected` with no counterpart public accessor.
+
+`pharos-proto/src/nyx_app/main.cpp` is exactly this kind of caller (`GApplication` is the
+`Application*` returned from `LoadApplicationFromFile`, held in a free function, no subclass).
+Its `updateWidgetTree()` called `GOverlayHost->Measure(...)`/`Arrange(...)` every frame against a
+`constexpr Penumbra::Rect kWindowRect{0.0f, 0.0f, 1280.0f, 720.0f}` — a compile-time guess, not a
+live query — because there was genuinely nothing else it could call. The real `pharos` binary
+(the hand-rolled, non-`Application`, non-Nyx `src/main.cpp`) doesn't have this problem: it owns
+its `PlatformWindow` directly and calls `window.GetLogicalWindowSize()` every frame, so it already
+resized correctly. Confirmed by reproducing: built and ran `pharos_nyx_bootstrap`, resized its OS
+window from 1280×752 to 1443×820 via System Events, and the mounted tree stayed pinned at its
+original 1280×720 arrangement — the extra space rendered as empty background, nothing reflowed
+into it.
+
+### What shipped
+
+Implemented exactly as proposed — a bare accessor, same shape as the three existing ones:
+
+```cpp
+// include/Penumbra/Application.h, in the same public block GetFontBackend()/GetDpiScaleFactor()/
+// SetTextInputActive already live in
+[[nodiscard]] Point GetWindowLogicalSize() const;
+```
+
+```cpp
+// src/Penumbra/Application.cpp
+Point Application::GetWindowLogicalSize() const { return Window.GetLogicalWindowSize(); }
+```
+
+`GetWindow()`/`GetRenderer()`/`GetInput()`/`GetConfig()` stay `protected`, unchanged — only the
+one missing piece (window size) is exposed, the same narrow-accessor pattern the DPI-scale entry
+above already established.
+
+Also wired into `pharos-proto`'s own `src/nyx_app/main.cpp`: `updateWidgetTree()`'s hardcoded
+`kWindowRect` was replaced with a live per-frame `GApplication->GetWindowLogicalSize()` query,
+building the frame's `Rect` from that each time instead of a `constexpr`.
+
+Verified end-to-end, not just compiled: `libpenumbra.a` builds clean. `pharos-proto` normally
+tracks `penumbra-proto`'s `main` via `FetchContent_Declare(... GIT_TAG main)`
+(`cmake/Dependencies.cmake`), not a local path, so it only picks up this change once it's pushed
+to `main` here — reconfigured `pharos-proto`'s build with
+`-DFETCHCONTENT_SOURCE_DIR_PENUMBRA=<local penumbra-proto checkout>` to build and verify against
+this change before it's pushed. Built `pharos_nyx_bootstrap`, ran it, resized its OS window via
+System Events from 1280×752 to 1374×820, and screenshotted the result: the treemap now fills the
+whole resized window with no dead space at the edges, instead of staying pinned at the original
+1280×720 arrangement.
+
+### What this unblocks
+
+`pharos_nyx_bootstrap` now reflows its widget tree on window resize, matching the real `pharos`
+binary's behavior — the resize-reflow half of the bug report that opened this entry. See
+`pharos-proto/docs/archive/pharos_next_steps_resolved.md` for that repo's own closing entry.
+
+### Explicitly not requested
+
+- **Widening `GetWindow()`/`GetRenderer()`/`GetInput()`/`GetConfig()` to public.** Only the one
+  missing piece (window size) is requested here, as a narrow accessor rather than exposing
+  `PlatformWindow&`/`Renderer&` themselves — same reasoning as every prior entry in this doc.
+- **Bridging window size into Nyx script itself.** Host-C++-side access only, same scoping every
+  prior ask in this doc has kept.
+- **A resize-change hook mirroring `OnDpiScaleChanged`.** Not needed — a bare accessor lets a
+  per-frame caller re-query the current size directly (which is what Measure/Arrange need every
+  frame anyway), without a new hook/callback type.
+
+## 2. TextInput activation (2026-08-14)
 
 ### Fixed 2026-08-14: a `LoadApplicationFromFile`-bootstrapped `Application` has no way to enable SDL text-input mode — a focused `TextInput`'s click/Enter/Backspace all work, but typed characters never arrive
 
@@ -139,7 +220,7 @@ path — confirmed above, not just theoretical.
   Penumbra guessing when a widget wants text input; a bare accessor is enough.
 
 
-## 2. DPI scale accessor (2026-08-13)
+## 3. DPI scale accessor (2026-08-13)
 
 ### Fixed 2026-08-13: a `LoadApplicationFromFile`-bootstrapped `Application` has no way to reach the current DPI scale factor — blocked mounting the real `.irisx` UI tree, not just a bare native panel
 
@@ -257,7 +338,7 @@ hand-wired native ports it uses today) inside its own Nyx-owned window.
   prior ask in this doc has kept.
 
 
-## 3. `GetFontBackend()` made public (2026-08-13)
+## 4. `GetFontBackend()` made public (2026-08-13)
 
 ### Fixed 2026-08-13: a `LoadApplicationFromFile`-bootstrapped `Application` has no way to reach its own `IFontBackend` — blocks building any real (text-bearing) widget tree from outside the class
 
@@ -317,7 +398,7 @@ render hook already carries `Renderer&` directly), so only the one accessor that
 missing was widened here.
 
 
-## 4. `SetOnUpdateHook`/`InputState` access (2026-08-13)
+## 5. `SetOnUpdateHook`/`InputState` access (2026-08-13)
 
 ### Fixed 2026-08-13: a `LoadApplicationFromFile`-bootstrapped `Application` has no way to reach that frame's `InputState` — blocks mounting a real (interactive) widget tree from outside the class
 
@@ -420,7 +501,7 @@ can actually be clicked, hovered, or scrolled, not just drawn.
   accessor.
 
 
-## 5. `SetOnRenderHook`/`OnRender` hook (2026-08-12)
+## 6. `SetOnRenderHook`/`OnRender` hook (2026-08-12)
 
 ### Fixed 2026-08-12: a `LoadApplicationFromFile`-bootstrapped `Application` has no way to actually draw anything — picking up the "real, load-bearing gap" flagged in the Nyx-bridge entry below
 
@@ -526,7 +607,7 @@ reporting a rect count. Didn't touch `nyx-proto` at all.
   entry below already scoped it.
 
 
-## 6. `PENUMBRA_WITH_NYX`/`amanuensis` build collision (2026-08-11)
+## 7. `PENUMBRA_WITH_NYX`/`amanuensis` build collision (2026-08-11)
 
 ### Fixed 2026-08-11: `PENUMBRA_WITH_NYX`'s own build wiring collided with a consumer's `amanuensis` target — found immediately while `pharos-proto` tried to actually consume the Nyx bridge
 
@@ -630,7 +711,7 @@ option's own build wiring is safe to enable, `pharos-proto` can flip `PENUMBRA_W
 cleanly with no special-casing on its side.
 
 
-## 7. `Application` base class + frame-loop ownership (2026-08-11)
+## 8. `Application` base class + frame-loop ownership (2026-08-11)
 
 ### Fixed 2026-08-11: `Penumbra::Application` had no window/frame-loop ownership — only a narrow `IWidgetLifecycle::OnTick` dispatcher
 
@@ -751,7 +832,7 @@ below) now that the C++ base shape it would bridge actually exists.
   it by hand.
 
 
-## 8. Nyx bridge + entry point mechanism (2026-08-11)
+## 9. Nyx bridge + entry point mechanism (2026-08-11)
 
 ### Fixed 2026-08-11: Nyx bridge + entry point mechanism — `Penumbra::Application` still wasn't actually inheritable from a `.nyx` script, and every app hand-rolled its own `main()`
 
@@ -886,7 +967,7 @@ own hand-rolled `main()` in favor of `#include "Penumbra/EntryPoint.h"` + one
   either existing app onto it.
 
 
-## 9. `Box` `justify-content` (2026-08-10)
+## 10. `Box` `justify-content` (2026-08-10)
 
 ### Fixed 2026-08-10: `Box` had no main-axis space-distribution (`justify-content`) concept — only sequential packing from the start
 
@@ -975,7 +1056,7 @@ ships, cross-referenced in that repo's own docs — the missing half was purely 
   simply not consulted there (confirmed unreachable by that branch's own code path).
 
 
-## 10. `Box` `FixedLeadingStack` (2026-08-03)
+## 11. `Box` `FixedLeadingStack` (2026-08-03)
 
 ### Fixed 2026-08-03: `Box`'s stack layout offered every child the same full available size, rather than shrinking it per sibling
 
