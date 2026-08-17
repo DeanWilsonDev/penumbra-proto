@@ -6,8 +6,10 @@
 #include "Penumbra/Render/Color.h"
 #include "Penumbra/Render/Renderer.h"
 #include "Penumbra/Render/SdlTtfFontBackend.h"
+#include "Penumbra/Widgets/WidgetBase.h"
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -70,8 +72,11 @@ public:
     virtual bool OnStart() { return true; }
 
     // Called once per frame, before OnRender. Registered IWidgetLifecycle::OnTick
-    // has already fired by the time this runs -- reconcile (e.g. iris::Tick()),
-    // Measure/Arrange, and update interaction state here.
+    // has already fired by the time this runs -- reconcile (e.g. iris::Tick()) here.
+    // If a root widget has been handed to SetRootWidget(), Run() itself calls
+    // Measure/Arrange/UpdateInteractionState on it immediately after this returns --
+    // an override does not need (and should not duplicate) that sequence by hand.
+    // Only a caller with no root widget mounted still owns that pass itself.
     virtual void OnUpdate(float DeltaSeconds) {}
 
     // Called once, after the frame loop ends, before the window is torn down.
@@ -154,6 +159,37 @@ public:
     // it a Nyx-loaded caller needs.
     [[nodiscard]] Point GetWindowLogicalSize() const;
 
+    // Takes ownership of Root. Once set, Run()'s own frame loop calls
+    // Measure/Arrange/UpdateInteractionState on it automatically every frame --
+    // right after OnUpdate (hook or virtual) returns, sized against
+    // GetWindowLogicalSize() -- and Draw()s it every frame too, right after
+    // Renderer::BeginFrame, before OnRender (hook or virtual) runs. This is the
+    // same sequence a hand-rolled frame loop drives itself today (see
+    // pharos-proto/src/nyx_app/main.cpp's updateWidgetTree()); once a root is
+    // mounted here, the app no longer needs its own copy of it. Passing nullptr
+    // un-mounts the current root (if any) and destroys it, matching
+    // unique_ptr's own reset() semantics. Public, not protected, for the same
+    // reason SetOnRenderHook/SetOnUpdateHook are: a caller that only holds an
+    // Application* obtained from Penumbra::Nyx::LoadApplication/
+    // LoadApplicationFromFile has no subclassing point of its own -- this is
+    // expected to be called by penumbra-ui-backend's own mount code once it has
+    // built a real tree via BuildWidgetTree/IrisNyxDriver, not by this repo
+    // growing its own .irisx-parsing knowledge.
+    void SetRootWidget(std::unique_ptr<Widgets::WidgetBase> Root);
+
+    // The widget last handed to SetRootWidget(), or nullptr if none is mounted.
+    // Ownership stays with Application; this is a non-owning observer only.
+    [[nodiscard]] Widgets::WidgetBase* GetRootWidget() const;
+
+    // Whether the root widget's own UpdateInteractionState(...) call (part of
+    // Run()'s automatic per-frame pass above) reported that it consumed this
+    // frame's input, mirroring the bool pharos-proto's own updateWidgetTree()
+    // returns today -- e.g. to gate a Backspace/Escape zoom-out handler behind
+    // "no popover ate this click first". False (not stale) whenever no root
+    // widget is mounted, so a caller never needs to null-check GetRootWidget()
+    // just to read this.
+    [[nodiscard]] bool GetRootWidgetConsumedInputThisFrame() const;
+
 protected:
     // Fills Config before the window/renderer are constructed. Not bridged to
     // Nyx (see the public block above): ApplicationConfig& isn't a
@@ -183,6 +219,9 @@ private:
     UpdateHook                OnUpdateHookFn;
 
     std::vector<IWidgetLifecycle*> RegisteredLifecycles;
+
+    std::unique_ptr<Widgets::WidgetBase> RootWidget;
+    bool                                 RootWidgetConsumedInputThisFrame{false};
 };
 
 } // namespace Penumbra

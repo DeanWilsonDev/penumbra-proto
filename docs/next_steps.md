@@ -33,6 +33,113 @@
 
 ## Open items
 
+### `Application` needs to own the Measure/Arrange/UpdateInteractionState/Draw pass for a mounted root tree, not leave it to the app
+
+**Status:** implemented 2026-08-17. `Application::SetRootWidget(std::unique_ptr<Widgets::WidgetBase>)`
+shipped in `include/Penumbra/Application.h`/`src/Penumbra/Application.cpp` — see "Implemented API"
+below for the final shape and "How it was verified" for how this was proven end-to-end. What's
+still open is entirely on `penumbra-ui-backend`'s side: it needs to actually call this once its own
+mount code (`BuildWidgetTree`/`IrisNyxDriver`) is ready to hand a built tree back in. This repo's
+own piece of the cross-repo ask is done. Originated from `pharos-proto`'s own `docs/next_steps.md`
+"Phase 3" entry (under "Nyx-native application") — not an internal bug report. Matching asks filed
+in `iris-proto`, `nyx-proto`, and `penumbra-ui-backend`'s own docs for the rest of that design.
+
+The user's ask, via `pharos-proto`: `Application` should have something like a real render
+entry point that takes the app's UI tree, after which nothing app-side has to drive the frame
+loop by hand — part of a broader "framework-owned component lifecycle system, hidden from the
+developer" design (see `pharos-proto`'s entry for the full picture; not repeated here).
+
+**Grounding, confirmed by reading `Application.h`/`Application.cpp` directly:** `Run()`'s frame
+loop (`Application.cpp:30-54`) pumps input, syncs DPI, calls `Tick(DeltaSeconds)` (which already
+fans `OnTick` out to every registered `IWidgetLifecycle*` — see below), calls `OnUpdate`, then
+`Renderer.BeginFrame`/`OnRender`/`EndFrameAndPresent`. **At no point does `Application` itself
+call `Measure`/`Arrange`/`UpdateInteractionState`/`Draw` on any widget tree — it owns no root
+widget pointer at all.** That whole sequence is still 100% the consuming app's own job, exactly
+matching `pharos-proto/src/nyx_app/main.cpp`'s hand-rolled `updateWidgetTree()` (its own
+`GOverlayHost->Measure(...)`/`Arrange(...)`/`UpdateInteractionState(...)` calls, run from
+Nyx-side `OnUpdate` via a registered host function). This is the one piece of the per-frame
+loop that has never moved anywhere — not into Nyx (Phase 2a), not into a framework-owned
+system — because `Application` has never had anywhere for it to move *to*.
+
+Separately, `Application` already has real, live, currently-unused infrastructure that's
+exactly shaped for the other half of this design: `RegisterLifecycle`/`UnregisterLifecycle`
+and a flat `RegisteredLifecycles` vector (`Application.cpp:81-97`), whose `OnTick` fan-out
+already runs every frame from `Tick()` — with zero implementers anywhere in the ecosystem
+today (confirmed by grep across this repo, `penumbra-ui-backend`, and `iris-proto`). That part
+doesn't need to change; it's the producer side (something registering against it) that's
+missing, tracked in the sibling repo asks above.
+
+### Implemented API
+
+```cpp
+// include/Penumbra/Application.h — public, alongside SetOnRenderHook/SetOnUpdateHook, for
+// the same reason those are public: a caller that only holds an Application* obtained from
+// Penumbra::Nyx::LoadApplication/LoadApplicationFromFile has no subclassing point.
+class Application {
+public:
+    // Takes ownership of Root. Once set, Run()'s own frame loop calls
+    // Measure/Arrange/UpdateInteractionState on it automatically every frame — right after
+    // OnUpdate (hook or virtual) returns, sized against GetWindowLogicalSize() — and Draw()s
+    // it every frame too, right after Renderer::BeginFrame, before OnRender (hook or
+    // virtual) runs, so any extra host-drawn content layers on top rather than under it.
+    // Passing nullptr un-mounts (and destroys) the current root.
+    void SetRootWidget(std::unique_ptr<Widgets::WidgetBase> Root);
+
+    // Non-owning observer; nullptr if nothing is mounted.
+    [[nodiscard]] Widgets::WidgetBase* GetRootWidget() const;
+
+    // Mirrors the bool pharos-proto's own updateWidgetTree() returns today — whether the
+    // root widget's own UpdateInteractionState(...) call (part of the automatic pass above)
+    // consumed this frame's input. False whenever no root widget is mounted.
+    [[nodiscard]] bool GetRootWidgetConsumedInputThisFrame() const;
+};
+```
+
+`Run()`'s loop now reads, in order: `Tick()` → `OnUpdate`(hook/virtual) →
+[if a root is mounted] `RootWidget->Measure(WindowSize)` → `Arrange(WindowRect)` →
+`UpdateInteractionState(Input)` (result cached for `GetRootWidgetConsumedInputThisFrame()`) →
+`Renderer.BeginFrame` → [if mounted] `RootWidget->Draw(Renderer)` → `OnRender`(hook/virtual) →
+`EndFrameAndPresent`. `OnUpdate`'s own doc comment was updated to say an override no longer
+needs (or should) duplicate that Measure/Arrange/UpdateInteractionState sequence by hand once
+a root is mounted.
+
+### How it was verified
+
+Built both configurations (`build/` — plain, `build-nyx/` — `-DPENUMBRA_WITH_NYX=ON`), then
+exercised `SetRootWidget` end-to-end from exactly its target caller shape: `demo_nyx/main.cpp`'s
+`CreateApplication()` builds a solid-colour `Box` filling the window and calls
+`GApplication->SetRootWidget(...)` on the `Application*` returned by `LoadApplicationFromFile`
+(`DemoApplication`, authored entirely in `DemoApp.nyx`, has no C++ subclassing point of its own —
+the same "no subclassing point" caller `GetFontBackend()`/`GetWindowLogicalSize()` etc. were
+built for). No `OnRender` override or `SetOnRenderHook` is registered anywhere in that demo — the
+Box is the demo's entire visual, drawn purely by `Run()`'s automatic pass. Confirmed three ways:
+(1) the host-registered `Tick` callback reads `GetRootWidget()->GetArrangedRect()` back at frame 2
+and logs a real `1280x720`, proving the automatic Measure/Arrange ran (frame 1's own Tick call
+fires *before* that frame's automatic pass, so frame 1 itself still reads as unarranged — a
+verification-script ordering detail, not a framework bug); (2) `screencapture` against the running
+app shows the whole window filled with the Box's colour, proving the automatic Draw ran; (3) a
+real `cliclick` press+release into the window (after explicitly bringing the app frontmost via
+`osascript`'s `System Events ... set frontmost of (first process whose unix id is <pid>)` —
+plain window-content clicks alone did not reliably focus/route to an SDL window launched
+backgrounded from a shell in this environment, worth knowing for future headed verification here)
+reached the Box's `OnPressed` callback and logged it, proving the automatic
+`UpdateInteractionState` call reaches real widget callbacks, not just layout.
+
+### Required changes elsewhere
+
+- `penumbra-ui-backend`: needs to be the thing that actually calls `SetRootWidget` once it's
+  built the real tree via `BuildWidgetTree`/`IrisNyxDriver` — this repo intentionally didn't grow
+  its own `.irisx`-parsing knowledge to do this itself. Coordinate the exact handoff shape (this
+  signature) with that repo's own filed ask before it implements its side.
+
+### What unblocks
+
+`pharos-proto`'s `nyx_app/main.cpp` (or any future Nyx-native Penumbra app) no longer needs its
+own `updateWidgetTree()`-equivalent function at all, once it (or `penumbra-ui-backend` on its
+behalf) calls `SetRootWidget` — mounting the root tree once is enough, and every frame's
+Measure/Arrange/UpdateInteractionState/Draw pass runs automatically as part of
+`Application::Run()`.
+
 ### `Configure(ApplicationConfig&)` and `OnRender(Render::Renderer&)` still can't be bridged to Nyx script itself — blocked on an upstream `nyx-proto` change
 
 **Status:** open since 2026-08-11, unaddressed since. Cross-repo blocker — the fix has to land

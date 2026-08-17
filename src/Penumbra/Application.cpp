@@ -44,7 +44,27 @@ int Application::Run() {
             OnUpdate(Input.DeltaTimeSeconds);
         }
 
+        // The Measure/Arrange/UpdateInteractionState pass a hand-rolled frame loop
+        // (e.g. pharos-proto's own updateWidgetTree()) would otherwise have to drive
+        // itself -- runs automatically once a root is mounted via SetRootWidget(),
+        // sized against the live window rather than a compile-time guess, same as
+        // that hand-rolled call site does via GetWindowLogicalSize().
+        if (RootWidget) {
+            const Point WindowSize = Window.GetLogicalWindowSize();
+            const Rect  WindowRect{0.0f, 0.0f, WindowSize.X, WindowSize.Y};
+            RootWidget->Measure(WindowSize);
+            RootWidget->Arrange(WindowRect);
+            RootWidgetConsumedInputThisFrame = RootWidget->UpdateInteractionState(Input);
+        } else {
+            RootWidgetConsumedInputThisFrame = false;
+        }
+
         Renderer.BeginFrame(Config.ClearColor);
+        // Drawn before OnRender/the render hook so any extra host-side drawing (e.g.
+        // a debug overlay) layers on top of the mounted tree rather than under it.
+        if (RootWidget) {
+            RootWidget->Draw(Renderer);
+        }
         if (HasRenderHook()) {
             OnRenderHookFn(Renderer);
         } else {
@@ -118,6 +138,18 @@ void Application::SetTextInputActive(bool Active) {
 
 Point Application::GetWindowLogicalSize() const {
     return Window.GetLogicalWindowSize();
+}
+
+void Application::SetRootWidget(std::unique_ptr<Widgets::WidgetBase> Root) {
+    RootWidget = std::move(Root);
+}
+
+Widgets::WidgetBase* Application::GetRootWidget() const {
+    return RootWidget.get();
+}
+
+bool Application::GetRootWidgetConsumedInputThisFrame() const {
+    return RootWidgetConsumedInputThisFrame;
 }
 
 const Platform::InputState& Application::GetInput() const {
