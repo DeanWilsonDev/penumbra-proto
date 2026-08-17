@@ -53,3 +53,37 @@ via host-side hooks), so there's no active pressure to file the `nyx-proto` chan
 here so it doesn't get re-discovered from scratch next time someone reaches for real Nyx-side
 window/draw control. See `docs/archive/penumbra_next_steps_resolved.md` §8 for the full original
 investigation (why the marshal-type gap exists, what was tried, what it would take to unblock).
+
+### A Nyx-loaded `Application*` has no way to read the current window size — every frame's Measure/Arrange is stuck on a hardcoded guess
+
+**Status:** open, found 2026-08-17 while fixing a `pharos-proto` bug report (window resize doing
+nothing visible; text bleeding out of the Inspector panel).
+
+`Application` (`include/Penumbra/Application.h`) exposes `GetFontBackend()`, `GetDpiScaleFactor()`,
+and `SetTextInputActive(bool)` as public members specifically so a caller that only holds an
+`Application*` from `Penumbra::Nyx::LoadApplication`/`LoadApplicationFromFile` — no subclassing
+point, since the Nyx script itself is the subclass — can still reach them (each one's own doc
+comment says as much: "no subclassing point, but still needs X"). `GetWindow()`/`GetRenderer()`,
+which is where the live window size actually lives (`Platform::PlatformWindow`), stay `protected`
+(lines 155–156) with no counterpart public accessor — there's no `GetWindowSize()`/
+`GetWindowLogicalSize()` alongside the three that already exist for exactly this reason.
+
+`pharos-proto/src/nyx_app/main.cpp` is exactly this kind of caller (`GApplication` is the
+`Application*` returned from `LoadApplicationFromFile`, held in a free function, no subclass).
+Its `updateWidgetTree()` calls `GOverlayHost->Measure(...)`/`Arrange(...)` every frame against a
+`constexpr Penumbra::Rect kWindowRect{0.0f, 0.0f, 1280.0f, 720.0f}` — a compile-time guess, not a
+live query — because there's genuinely nothing else it can call. The real `pharos` binary (the
+hand-rolled, non-`Application`, non-Nyx `src/main.cpp`) doesn't have this problem: it owns its
+`PlatformWindow` directly and calls `window.GetLogicalWindowSize()` every frame, so it already
+resizes correctly. Confirmed by reproducing both: built and ran `pharos_nyx_bootstrap`, resized
+its OS window from 1280×752 to 1443×820 via System Events, and the mounted tree stayed pinned at
+its original 1280×720 arrangement — the extra space just renders as empty background, nothing
+reflows into it.
+
+Fix looks like the same shape as the three existing accessors: a public
+`Point GetWindowLogicalSize() const` (or similar) on `Application`, forwarding to
+`Window.GetLogicalWindowSize()` the same way `GetDpiScaleFactor()` forwards to the Renderer's own
+scale factor. Once that exists, `pharos_nyx_bootstrap`'s `main.cpp` can replace `kWindowRect` with
+a live per-frame query and the resize bug goes away on the Pharos side with no further Penumbra
+work — noted here rather than worked around with a raw SDL call or a reach into `GetWindow()`,
+per this ecosystem's own "ask the dependency, don't hack around it" rule.
