@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Penumbra/IWidgetLifecycle.h"
+#include "Penumbra/LifecycleRegistry.h"
 #include "Penumbra/Platform/InputState.h"
 #include "Penumbra/Platform/PlatformWindow.h"
 #include "Penumbra/Render/Color.h"
@@ -54,8 +55,28 @@ public:
     // Ends the frame loop after the current frame finishes.
     void RequestQuit();
 
+    // Thin forwards onto an owned Penumbra::LifecycleRegistry (see
+    // GetLifecycleRegistry() below) -- same behavior as always, now factored
+    // out into a standalone class a non-Application host can also construct
+    // directly (docs/next_steps.md's "IWidgetLifecycle registration/ticking
+    // needs to work without owning a full Application" entry).
     void RegisterLifecycle(IWidgetLifecycle* Lifecycle);
     void UnregisterLifecycle(IWidgetLifecycle* Lifecycle);
+
+    // Public for the same reason SetOnRenderHook/SetOnUpdateHook/
+    // GetFontBackend/etc. above are: a caller that only holds an
+    // Application* obtained from Penumbra::Nyx::LoadApplication/
+    // LoadApplicationFromFile has no subclassing point, but a reconciler
+    // wiring component lifecycles against "whatever host is available"
+    // (e.g. penumbra-ui-backend's BuildContext::LifecycleHost) needs a
+    // Penumbra::LifecycleRegistry* either way -- this accessor lets an
+    // Application-backed host hand one over
+    // (&App->GetLifecycleRegistry()) exactly the same way a hand-rolled,
+    // non-Application host would hand over a LifecycleRegistry it
+    // constructed and Tick()s itself, so BuildContext::LifecycleHost can be
+    // typed as Penumbra::LifecycleRegistry* and accept either kind of host
+    // uniformly.
+    [[nodiscard]] LifecycleRegistry& GetLifecycleRegistry();
 
     // Public (not protected, unlike Configure/OnRender below) because
     // nyx-proto's RegisterInheritableType<T>::Override wires a Nyx super call
@@ -206,6 +227,9 @@ protected:
     [[nodiscard]] const ApplicationConfig&    GetConfig() const;
 
 private:
+    // Forwards to Lifecycles.Tick(DeltaSeconds) -- kept as a private member
+    // (rather than calling Lifecycles.Tick directly from Run()) only so
+    // Run()'s own frame-loop reads the same "Tick()" name it always has.
     void Tick(float DeltaSeconds);
 
     ApplicationConfig         Config;
@@ -218,7 +242,7 @@ private:
     RenderHook                OnRenderHookFn;
     UpdateHook                OnUpdateHookFn;
 
-    std::vector<IWidgetLifecycle*> RegisteredLifecycles;
+    LifecycleRegistry Lifecycles;
 
     std::unique_ptr<Widgets::WidgetBase> RootWidget;
     bool                                 RootWidgetConsumedInputThisFrame{false};

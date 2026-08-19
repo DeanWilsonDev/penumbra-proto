@@ -99,21 +99,19 @@ bool Application::HasUpdateHook() const {
 }
 
 void Application::RegisterLifecycle(IWidgetLifecycle* Lifecycle) {
-    RegisteredLifecycles.push_back(Lifecycle);
-    Lifecycle->OnMount();
+    Lifecycles.RegisterLifecycle(Lifecycle);
 }
 
 void Application::UnregisterLifecycle(IWidgetLifecycle* Lifecycle) {
-    Lifecycle->OnUnmount();
-    std::erase(RegisteredLifecycles, Lifecycle);
+    Lifecycles.UnregisterLifecycle(Lifecycle);
+}
+
+LifecycleRegistry& Application::GetLifecycleRegistry() {
+    return Lifecycles;
 }
 
 void Application::Tick(float DeltaSeconds) {
-    const TickInfo Info{DeltaSeconds};
-
-    for (IWidgetLifecycle* Lifecycle : RegisteredLifecycles) {
-        Lifecycle->OnTick(Info);
-    }
+    Lifecycles.Tick(DeltaSeconds);
 }
 
 Platform::PlatformWindow& Application::GetWindow() {

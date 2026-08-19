@@ -6,7 +6,7 @@
 > this kind in this repo (previously used `docs/*_requirements.md`, one
 > file per investigation, still present as historical record — not
 > migrated into here retroactively).
-> Last updated: 2026-08-17.
+> Last updated: 2026-08-19.
 
 > **2026-08-14 audit:** every entry that had accumulated under "Open items" (ten dated `Fixed`
 > write-ups, 2026-08-03 through 2026-08-14, ~1000 lines) was actually resolved — none of them
@@ -32,6 +32,123 @@
 > until this commit is pushed here (that repo tracks `penumbra-proto`'s `main` unpinned).
 
 ## Open items
+
+### `IWidgetLifecycle` registration/ticking needs to work without owning a full `Application` — cross-repo ask from `pharos-proto`
+
+**Status:** implemented 2026-08-19. `Penumbra::LifecycleRegistry` shipped
+(`include/Penumbra/LifecycleRegistry.h`, `src/Penumbra/LifecycleRegistry.cpp`) — see "Implemented
+fix" and "How it was verified" below for the final shape and how it was proven. What's still open
+is entirely on `penumbra-ui-backend`'s side: it needs to actually widen `BuildContext::LifecycleHost`
+to consume this. This repo's own piece of the cross-repo ask is done.
+
+**The concrete case that hit this:** `pharos-proto` has two binaries mounting the same shared
+`src/ui/nyx/App.irisx` tree. `pharos_nyx_bootstrap` (`src/nyx_app/main.cpp`) is built on a real
+`Penumbra::Application` subclass and sets `penumbra-ui-backend`'s `BuildContext::LifecycleHost =
+GApplication`, so `App.irisx`'s `<InspectorPanel />` child component gets a real `OnMount`/
+`OnTick` and its row values sync live via the `GetRef(name).SetText/...` mechanism
+(`penumbra-ui-backend`'s own `docs/next_steps.md`, done 2026-08-18). The real `pharos` binary
+(`src/main.cpp`) mounts the *exact same* `App.irisx` file, but it's the hand-rolled
+`Platform::PlatformWindow`-owning app `pharos-proto/CLAUDE.md`'s "Verifying UI changes" section
+documents — it constructs `PlatformWindow`/`Renderer`/`SdlTtfFontBackend` directly and drives its
+own frame loop, never a `Penumbra::Application`. So it has no object it can legally assign to
+`BuildContext::LifecycleHost` (`Penumbra::Application* LifecycleHost{nullptr};`,
+`penumbra-ui-backend/include/PenumbraUiBackend/Walker.h:89` — the field is typed as a concrete
+`Application*`, not an interface). Once `App.irisx`'s Inspector splice became a real
+`<InspectorPanel />` component invocation instead of a `<Native>` splice, this binary's Inspector
+panel lost its only working sync path (it used to hand-roll its own C++ `panel.sync()` closure
+against a separately-mounted tree, `src/ui/inspector_panel.cpp`'s `buildInspectorPanel()` — that
+mechanism still runs every frame but now updates an orphaned, never-drawn widget tree, since
+`App.irisx` no longer references the `<Native>` name it used to attach to). Full write-up of how
+this was found in `pharos-proto`'s own `docs/next_steps.md`.
+
+**Grounding, confirmed by reading `Application.h`/`Application.cpp` directly, not guessed:**
+`RegisterLifecycle`/`UnregisterLifecycle`/the private `Tick(float)` and the
+`std::vector<IWidgetLifecycle*> RegisteredLifecycles` member they operate on
+(`include/Penumbra/Application.h:57-58,221`, `src/Penumbra/Application.cpp:101-117`) touch
+**nothing else on `Application`** — no `Window`, `Renderer`, `FontBackend`, `Input`, or frame-loop
+state:
+
+```cpp
+void Application::RegisterLifecycle(IWidgetLifecycle* Lifecycle) {
+    RegisteredLifecycles.push_back(Lifecycle);
+    Lifecycle->OnMount();
+}
+void Application::UnregisterLifecycle(IWidgetLifecycle* Lifecycle) {
+    Lifecycle->OnUnmount();
+    std::erase(RegisteredLifecycles, Lifecycle);
+}
+void Application::Tick(float DeltaSeconds) {
+    const TickInfo Info{DeltaSeconds};
+    for (IWidgetLifecycle* Lifecycle : RegisteredLifecycles) Lifecycle->OnTick(Info);
+}
+```
+
+This is a self-contained, trivially-extractable mechanism bolted onto `Application` only because
+`Application` was the first (and so far only) place `IWidgetLifecycle` got wired up — not because
+lifecycle dispatch has any actual dependency on owning a window/renderer/frame loop.
+
+**Implemented fix**, mirroring how `IWidgetLifecycle` itself was deliberately kept
+Penumbra-independent (see that header's own doc comment — "should lift out into a standalone
+`umbra-interfaces` library unchanged"): the three members/methods were factored out of
+`Application` into a small standalone class, exactly as proposed:
+
+```cpp
+// include/Penumbra/LifecycleRegistry.h
+class LifecycleRegistry {
+public:
+    void RegisterLifecycle(IWidgetLifecycle* Lifecycle);   // same OnMount-on-register behavior
+    void UnregisterLifecycle(IWidgetLifecycle* Lifecycle); // same OnUnmount-on-unregister behavior
+    void Tick(float DeltaSeconds);                          // same OnTick fan-out
+private:
+    std::vector<IWidgetLifecycle*> RegisteredLifecycles;
+};
+```
+
+`Application` gained one as a private member (`LifecycleRegistry Lifecycles;`,
+`include/Penumbra/Application.h`) and its own `RegisterLifecycle`/`UnregisterLifecycle`/`Tick`
+became thin forwards — zero behavior change for `pharos_nyx_bootstrap` or any other existing
+consumer. `Application` also gained a public accessor, `[[nodiscard]] LifecycleRegistry&
+GetLifecycleRegistry()`, returning the same registry its own Register/Unregister/Tick forward to —
+this is the piece that unblocks the "Required changes elsewhere" note below: an
+`Application`-backed host hands over `&App->GetLifecycleRegistry()`, and a hand-rolled host like
+`pharos-proto/src/main.cpp` constructs its own `Penumbra::LifecycleRegistry` directly (alongside
+its own `PlatformWindow`/`Renderer`) and calls `.Tick(deltaSeconds)` once per frame from its own
+loop — no window/renderer duplication, no need to become `Application`-based just to get `OnTick`
+dispatch, and both kinds of host now hand over the exact same pointer type.
+
+**Required changes elsewhere:** `penumbra-ui-backend`'s `BuildContext::LifecycleHost`
+(`include/PenumbraUiBackend/Walker.h:89`) is still typed as a concrete `Penumbra::Application*` —
+confirmed (by reading `Walker.cpp`'s `RegisterLifecycleIfPresent`) that it only ever calls
+`Host->RegisterLifecycle(...)`/`Host->UnregisterLifecycle(...)` on it, nothing else, so it needs
+only a straight retype to `Penumbra::LifecycleRegistry*` (no wrapper/interface needed) before a
+hand-rolled host can actually plug in. That retype is `penumbra-ui-backend`'s own piece of this
+ask, not done here — coordinate the exact shape with that repo's own `docs/next_steps.md`.
+
+**What unblocks:** once `penumbra-ui-backend` retypes `LifecycleHost`, `pharos-proto/src/main.cpp`
+(the real, non-Nyx-native `pharos` binary) could construct its own `Penumbra::LifecycleRegistry`,
+set `BuildContext::LifecycleHost` to it, `.Tick()` it once per frame from its own hand-rolled loop,
+and delete its own hand-rolled `inspector_panel.cpp`/`buildInspectorPanel()` `panel.sync()`
+mechanism — the same way `pharos_nyx_bootstrap` already deleted `inspector_panel_native.cpp` —
+letting both binaries share one live-synced `InspectorPanel.irisx` mount instead of only one of
+them working.
+
+**How it was verified:** built both configurations (`build/` — plain, `build-nyx/` —
+`-DPENUMBRA_WITH_NYX=ON`) clean after adding `src/Penumbra/LifecycleRegistry.cpp` to
+`CMakeLists.txt`'s `add_library(penumbra STATIC ...)` list (this repo's source list is explicit,
+not `GLOB_RECURSE`, so this was a required manual step, followed by re-running `cmake -B build`/
+`cmake -B build-nyx -DPENUMBRA_WITH_NYX=ON` before building). No demo or test in this repo
+registers an `IWidgetLifecycle` today (confirmed by grep — matches the "zero implementers
+anywhere in the ecosystem" note elsewhere in this doc), so compiling both configs alone doesn't
+prove dispatch behavior. Wrote and ran a standalone smoke program (compiled ad hoc against the
+built `libpenumbra.a`, not added to the permanent build) with a `RecordingLifecycle` that appends
+a tag to a string on each hook call, exercised two ways: (1) through
+`Application::RegisterLifecycle`/`UnregisterLifecycle` plus `GetLifecycleRegistry().Tick(...)` —
+confirmed `OnMount` fires on register, `OnTick` fan-out carries the right `DeltaSeconds` to every
+registered lifecycle, `OnUnmount` fires on unregister, and an unregistered lifecycle is not ticked
+again afterward; (2) through a bare `Penumbra::LifecycleRegistry` constructed with no `Application`
+involved at all, same three checks. Both passed, proving both the "zero behavior change through
+`Application`" claim and the "hand-rolled host can use `LifecycleRegistry` standalone" claim this
+entry was filed to unblock.
 
 ### `Application` needs to own the Measure/Arrange/UpdateInteractionState/Draw pass for a mounted root tree, not leave it to the app
 
