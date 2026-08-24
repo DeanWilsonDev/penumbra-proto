@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <fstream>
 #include <sstream>
+#include <unordered_map>
 #include <vector>
 
 // The NyxBridge<Penumbra::Application> specialization lives here, not in the
@@ -68,32 +69,57 @@ BridgeHost& GetBridgeHost() {
     return Host;
 }
 
-} // namespace
+struct ExternalHostState {
+    bool TypeRegistered = false;
+    std::vector<std::shared_ptr<::nyx::interpreter::Interpreter>> Interpreters;
+};
 
-Application* LoadApplication(const std::string& Source, const std::string& Filename,
-                             const std::string& ApplicationClassName) {
-    BridgeHost& Host = GetBridgeHost();
+ExternalHostState& GetExternalHostState(::nyx::host::NyxRuntime& Runtime) {
+    static std::unordered_map<::nyx::host::NyxRuntime*, ExternalHostState> Hosts;
+    return Hosts[&Runtime];
+}
 
-    if (!Host.TypeRegistered) {
-        Host.Runtime.RegisterInheritableType<Application>("Application")
+Application* MountApplication(
+    ::nyx::host::NyxRuntime& Runtime, bool& TypeRegistered,
+    std::vector<std::shared_ptr<::nyx::interpreter::Interpreter>>& Interpreters,
+    const std::string& Source, const std::string& Filename, const std::string& ApplicationClassName) {
+    if (!TypeRegistered) {
+        Runtime.RegisterInheritableType<Application>("Application")
             .Override("OnStart", +[](Application& Self) -> bool { return Self.Application::OnStart(); })
             .Override("OnUpdate",
-                     +[](Application& Self, float DeltaSeconds) { Self.Application::OnUpdate(DeltaSeconds); })
+                      +[](Application& Self, float DeltaSeconds) { Self.Application::OnUpdate(DeltaSeconds); })
             .Override("OnShutdown", +[](Application& Self) { Self.Application::OnShutdown(); })
             .Override("OnDpiScaleChanged", +[](Application& Self, float NewDpiScaleFactor) {
                 Self.Application::OnDpiScaleChanged(NewDpiScaleFactor);
             });
-        Host.TypeRegistered = true;
+        TypeRegistered = true;
     }
 
     try {
-        auto Scope = Host.Runtime.MountBridged<Application>(Source, Filename, ApplicationClassName);
-        Host.Interpreters.push_back(Scope.interpreter);
+        auto Scope = Runtime.MountBridged<Application>(Source, Filename, ApplicationClassName);
+        Interpreters.push_back(Scope.interpreter);
         return &Scope.Get();
     } catch (const std::exception& Error) {
         std::fprintf(stderr, "Penumbra::Nyx::LoadApplication: %s: %s\n", Filename.c_str(), Error.what());
         return nullptr;
     }
+}
+
+} // namespace
+
+Application* LoadApplication(const std::string& Source, const std::string& Filename,
+                             const std::string& ApplicationClassName) {
+    BridgeHost& Host = GetBridgeHost();
+    return MountApplication(Host.Runtime, Host.TypeRegistered, Host.Interpreters, Source, Filename,
+                            ApplicationClassName);
+}
+
+Application* LoadApplication(const std::string& Source, const std::string& Filename,
+                             const std::string& ApplicationClassName,
+                             ::nyx::host::NyxRuntime& ExternalRuntime) {
+    ExternalHostState& Host = GetExternalHostState(ExternalRuntime);
+    return MountApplication(ExternalRuntime, Host.TypeRegistered, Host.Interpreters, Source, Filename,
+                            ApplicationClassName);
 }
 
 Application* LoadApplicationFromFile(const std::filesystem::path& Path,
@@ -106,6 +132,19 @@ Application* LoadApplicationFromFile(const std::filesystem::path& Path,
     std::ostringstream Contents;
     Contents << File.rdbuf();
     return LoadApplication(Contents.str(), Path.filename().string(), ApplicationClassName);
+}
+
+Application* LoadApplicationFromFile(const std::filesystem::path& Path,
+                                     const std::string& ApplicationClassName,
+                                     ::nyx::host::NyxRuntime& ExternalRuntime) {
+    std::ifstream File(Path);
+    if (!File) {
+        std::fprintf(stderr, "Penumbra::Nyx::LoadApplicationFromFile: cannot open '%s'\n", Path.string().c_str());
+        return nullptr;
+    }
+    std::ostringstream Contents;
+    Contents << File.rdbuf();
+    return LoadApplication(Contents.str(), Path.filename().string(), ApplicationClassName, ExternalRuntime);
 }
 
 ::nyx::host::NyxRuntime& GetRuntime() {

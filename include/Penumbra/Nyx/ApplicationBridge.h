@@ -43,6 +43,42 @@ Application* LoadApplication(const std::string& Source, const std::string& Filen
 Application* LoadApplicationFromFile(const std::filesystem::path& Path,
                                      const std::string& ApplicationClassName);
 
+// Same as LoadApplication above, but mounts against ExternalRuntime -- a
+// nyx::host::NyxRuntime the caller already owns -- instead of this bridge's own
+// process-lifetime runtime (GetRuntime() below). Lets one caller-owned runtime
+// back both a Nyx-authored Application subclass and something else built against
+// the same runtime (e.g. an iris-proto IrisNyxDriver constructed with its own
+// external-runtime constructor -- see iris-proto's docs archive
+// "iris_nyx_runtime_injection_gap_resolved.md", the precedent this mirrors), so
+// registrations on one side are directly callable from the other with no ad hoc
+// relay interpreter in between.
+//
+// The Application inheritable type is registered on ExternalRuntime itself
+// (once per distinct runtime, tracked internally) the first time this overload
+// (or the ExternalRuntime LoadApplicationFromFile below) is called with it --
+// this never touches GetRuntime()'s own runtime or its registration state, and
+// vice versa: the self-owned and caller-owned paths are fully isolated from
+// each other. Register any host callbacks the script needs
+// (ExternalRuntime.RegisterFunction/RegisterType/...) before calling this --
+// same MountBridged-snapshots-at-mount-time timing rule GetRuntime()'s doc
+// comment states below.
+//
+// The caller owns ExternalRuntime and must keep it alive for at least as long
+// as the returned Application* and the retained interpreter bridge state
+// backing it -- unlike the no-runtime overload above, nothing here extends
+// ExternalRuntime's own lifetime the way the internal process-lifetime
+// BridgeHost does for its own runtime.
+Application* LoadApplication(const std::string& Source, const std::string& Filename,
+                             const std::string& ApplicationClassName,
+                             ::nyx::host::NyxRuntime& ExternalRuntime);
+
+// LoadApplicationFromFile, mounting against ExternalRuntime -- see the
+// ExternalRuntime overload of LoadApplication above for the full ownership and
+// isolation contract, which applies identically here.
+Application* LoadApplicationFromFile(const std::filesystem::path& Path,
+                                     const std::string& ApplicationClassName,
+                                     ::nyx::host::NyxRuntime& ExternalRuntime);
+
 // The same process-lifetime NyxRuntime LoadApplication/LoadApplicationFromFile
 // use internally -- exposed so a caller can RegisterFunction/RegisterType its
 // own host callbacks (e.g. a "Log" a Nyx OnStart/OnUpdate override can call)
