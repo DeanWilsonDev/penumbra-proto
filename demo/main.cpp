@@ -13,6 +13,7 @@
 #include "Penumbra/Widgets/OverlayHost.h"
 #include "Penumbra/Widgets/ScrollablePanel.h"
 #include "Penumbra/Widgets/SplitPanel.h"
+#include "Penumbra/Widgets/TextArea.h"
 #include "Penumbra/Widgets/TextInput.h"
 #include "Penumbra/Widgets/ViewportWidget.h"
 
@@ -196,6 +197,39 @@ int main() {
             Root->AddChild(std::move(Row));
         }
 
+        TextArea* Notes = nullptr;
+        {
+            // Label above the field, not beside it (unlike the single-line rows above) --
+            // a multi-line field wants the column's full width, which Root's own
+            // CrossAlign::Stretch already gives a direct child; wedging it into a
+            // MakeRow() alongside a label would size it independently of that column
+            // width and just get clipped by Root's own viewport once it overflowed.
+            Root->AddChild(MakeLabel("Notes:", Theme.ColorTextPrimary));
+            auto AreaWidget = std::make_unique<TextArea>();
+            AreaWidget->Style                  = Demo::ResolveInputFieldStyle(Theme);
+            AreaWidget->FontBackend            = &FontBackend;
+            AreaWidget->Font                   = BodyFont;
+            AreaWidget->ColorText              = Theme.ColorTextPrimary;
+            AreaWidget->ColorCaret             = Theme.ColorTextPrimary;
+            AreaWidget->ColorSelection         = Theme.ColorSelection;
+            AreaWidget->ColorScrollbarThumb    = Theme.ColorTextDisabled;
+            AreaWidget->CaretWidthLogical      = Theme.BorderWidthDefault;
+            AreaWidget->PreferredWidthLogical  = Theme.FieldWidthLarge;
+            AreaWidget->PreferredHeightLogical = Theme.FieldHeightLarge;
+            AreaWidget->WheelStepLogical       = Theme.TextAreaWheelStep;
+            AreaWidget->ScrollbarWidthLogical  = Theme.ScrollbarWidth;
+            AreaWidget->Focus                  = &Focus;
+            AreaWidget->Clipboard              = &Window;
+            AreaWidget->Text                   = "Multi-line notes. Word-wraps automatically, "
+                                                  "and scrolls (with a scrollbar) once the text "
+                                                  "runs past the field's height.\n\nType, drag to "
+                                                  "select, and try the arrow keys -- Up/Down move "
+                                                  "by visual line and Home/End jump to the start/"
+                                                  "end of the current line.";
+            Notes = AreaWidget.get();
+            Root->AddChild(std::move(AreaWidget));
+        }
+
         Label* StatusLabel = nullptr;
         {
             auto Status = MakeLabel("", Theme.ColorTextDisabled);
@@ -352,6 +386,7 @@ int main() {
                 }
                 Drag->Font  = BodyFont;
                 Field->Font = BodyFont;
+                Notes->Font = BodyFont;
                 LastKnownDpiScaleFactor = CurrentDpiScaleFactor;
             }
 

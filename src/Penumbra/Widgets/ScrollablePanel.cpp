@@ -116,6 +116,7 @@ bool ScrollablePanel::UpdateInteractionState(const Platform::InputState& Input) 
     // scrolled out of view cannot be interacted with.
     const Rect Content = ContentRectFrom(ArrangedRect);
     bool Consumed = false;
+    bool ChildConsumedWheel = false;
     if (PointInRect(Input.MousePosition, Content)) {
         for (auto Iterator = Children.rbegin(); Iterator != Children.rend(); ++Iterator) {
             if (!(*Iterator)->GetIsVisible()) {
@@ -124,15 +125,23 @@ bool ScrollablePanel::UpdateInteractionState(const Platform::InputState& Input) 
             }
             if ((*Iterator)->UpdateInteractionState(Input)) {
                 Consumed = true;
+                ChildConsumedWheel = (*Iterator)->ConsumedWheelThisFrame();
                 break;
             }
         }
     }
 
-    if (WheelStepLogical != 0.0f && Input.MouseWheelDelta != 0.0f) {
+    // A nested wheel-scrollable child (another ScrollablePanel, or a TextArea) that
+    // still had room to scroll already used the wheel delta on itself -- don't also
+    // apply it here, or hovering it would scroll both it and this panel at once.
+    WheelHandledThisFrame = false;
+    if (!ChildConsumedWheel && WheelStepLogical != 0.0f && Input.MouseWheelDelta != 0.0f) {
         const float MaxScroll = NonNegative(ContentHeight - Content.H);
-        ScrollOffsetY = Clamp(ScrollOffsetY - Input.MouseWheelDelta * WheelStepLogical, 0.0f, MaxScroll);
-        Consumed = true;
+        if (MaxScroll > 0.0f) {
+            ScrollOffsetY = Clamp(ScrollOffsetY - Input.MouseWheelDelta * WheelStepLogical, 0.0f, MaxScroll);
+            Consumed = true;
+            WheelHandledThisFrame = true;
+        }
     }
 
     // The panel is opaque: being over it consumes input regardless.

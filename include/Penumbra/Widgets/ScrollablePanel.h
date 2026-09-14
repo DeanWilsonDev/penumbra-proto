@@ -20,9 +20,12 @@ public:
     bool  UpdateInteractionState(const Platform::InputState&) override;
     void  Draw(Render::Renderer&) override;
 
+    bool ConsumedWheelThisFrame() const override { return WheelHandledThisFrame; }
+
 private:
     float ScrollOffsetY{0.0f}; // how far the content is scrolled up, in logical px
     float ContentHeight{0.0f}; // total stacked height of children, from Measure
+    bool  WheelHandledThisFrame{false};
 };
 
 } // namespace Penumbra::Widgets

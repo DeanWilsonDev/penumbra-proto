@@ -38,6 +38,7 @@ add_library(penumbra STATIC
     src/Penumbra/Widgets/Checkbox.cpp
     src/Penumbra/Widgets/NumericDrag.cpp
     src/Penumbra/Widgets/TextInput.cpp
+    src/Penumbra/Widgets/TextArea.cpp
     src/Penumbra/Widgets/ViewportWidget.cpp
     src/Penumbra/Widgets/SplitPanel.cpp
     src/Penumbra/Widgets/OverlayHost.cpp)

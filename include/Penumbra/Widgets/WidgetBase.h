@@ -31,6 +31,16 @@ public:
     // Returns true if this widget consumed the input (stops propagation).
     virtual bool UpdateInteractionState(const Platform::InputState&) = 0;
 
+    // Whether this widget itself used a mouse-wheel scroll on ITSELF this frame --
+    // distinct from UpdateInteractionState's general "consumed" return, which also
+    // covers plain hover/click and would otherwise make an ancestor ScrollablePanel
+    // think a nested wheel-scrollable region (another ScrollablePanel, or a TextArea)
+    // already claimed the wheel even when that region had no room left to scroll (and
+    // so should let the wheel fall through to the ancestor instead of getting stuck).
+    // False by default; only a widget with its own WheelStepLogical-style field needs
+    // to override it.
+    virtual bool ConsumedWheelThisFrame() const { return false; }
+
     virtual void Draw(Render::Renderer&) = 0;
 
     // A child's margin is consumed by its parent during Arrange. Margin lives on

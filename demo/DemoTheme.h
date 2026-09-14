@@ -30,6 +30,11 @@ struct Theme {
     float CheckboxGlyphSize  = 18.0f;  // edge length of the checkbox square
     float DragSensitivity    = 0.05f;  // value change per logical px dragged
     float FieldWidthSmall    = 160.0f; // min width for numeric/text fields
+    float FieldWidthLarge    = 240.0f; // base width for the multi-line text area (it also
+                                        // stretches to fill Root's column via CrossAlign::Stretch)
+    float FieldHeightLarge   = 96.0f;  // height for the multi-line text area
+    float TextAreaWheelStep  = 24.0f;  // logical px scrolled per wheel notch in a text area
+    float ScrollbarWidth    = 4.0f;    // gutter width for the text area's scroll indicator
     float SeparatorThickness = 2.0f;   // height of a separator Box
 
     float AnimColorSeconds   = 0.09f;  // easing time constant for hover/press colours
