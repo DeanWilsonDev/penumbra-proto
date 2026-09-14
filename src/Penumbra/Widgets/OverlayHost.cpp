@@ -34,6 +34,10 @@ void OverlayHost::SetOverlayPlacement(OverlayId Id, Rect PlacementRectLogical) {
 }
 
 void OverlayHost::DismissOverlay(OverlayId Id) {
+    if (DispatchingOverlayInput) {
+        PendingDismissals.push_back(Id);
+        return;
+    }
     Overlays.erase(std::remove_if(Overlays.begin(), Overlays.end(),
                                   [Id](const Overlay& Entry) { return Entry.Id == Id; }),
                   Overlays.end());
@@ -69,22 +73,32 @@ bool OverlayHost::UpdateInteractionState(const Platform::InputState& Input) {
     // contract and keeps "one click closes one popup" simple, the same
     // convention practically every menu/dropdown implementation uses.
     Overlay& Top = Overlays.back();
+    const OverlayId TopId = Top.Id;
+    const Rect TopPlacement = Top.PlacementRectLogical;
+    const bool TopDismissesOutside = Top.DismissOnOutsideClick;
 
     for (Platform::Key PressedKey : Input.KeysPressedThisFrame) {
         if (PressedKey == Platform::Key::Escape) {
-            DismissOverlay(Top.Id);
+            DismissOverlay(TopId);
             return true;
         }
     }
 
-    if (Top.Content->UpdateInteractionState(Input)) {
+    DispatchingOverlayInput = true;
+    const bool ContentConsumed = Top.Content->UpdateInteractionState(Input);
+    DispatchingOverlayInput = false;
+    for (const OverlayId Id : PendingDismissals) {
+        DismissOverlay(Id);
+    }
+    PendingDismissals.clear();
+    if (ContentConsumed || Overlays.empty()) {
         return true;
     }
 
     const bool PressedOutside = Input.MouseButtonPressedThisFrame[0] &&
-        !PointInRect(Input.MousePosition, Top.PlacementRectLogical);
-    if (Top.DismissOnOutsideClick && PressedOutside) {
-        DismissOverlay(Top.Id);
+        !PointInRect(Input.MousePosition, TopPlacement);
+    if (TopDismissesOutside && PressedOutside) {
+        DismissOverlay(TopId);
         return true;
     }
 

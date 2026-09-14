@@ -2,7 +2,10 @@
 
 A retained-mode C++20 UI framework on SDL3 (`SDL_Renderer` path), built to
 validate the layered architecture described in
-[`penumbra_poc_spec.md`](penumbra_poc_spec.md).
+[`docs/penumbra_poc_spec.md`](docs/penumbra_poc_spec.md).
+
+Contributor setup, architectural constraints, and validation guidance live in
+[`DEVELOPING.md`](DEVELOPING.md).
 
 ## Layers
 
@@ -18,16 +21,17 @@ The hard rule: no `SDL_Color` literal and no pixel literal anywhere under
 
 ## Build & run
 
-Requires CMake ≥ 3.24, a C++20 compiler, and SDL3 + SDL3_ttf installed with
-their CMake config packages.
+Requires CMake ≥ 3.24, a C++20 compiler, and SDL3, SDL3_ttf, and SDL3_image
+installed with their CMake config packages.
 
 ```bash
 # macOS (Homebrew)
-brew install sdl3 sdl3_ttf
+brew install sdl3 sdl3_ttf sdl3_image
 
-# Debian/Ubuntu — needs SDL3 packages (e.g. libsdl3-dev libsdl3-ttf-dev),
+# Debian/Ubuntu — needs SDL3 packages (for example libsdl3-dev,
+# libsdl3-ttf-dev, and libsdl3-image-dev),
 # available on recent releases or from a backport/source build.
-sudo apt install libsdl3-dev libsdl3-ttf-dev
+sudo apt install libsdl3-dev libsdl3-ttf-dev libsdl3-image-dev
 ```
 
 ```bash

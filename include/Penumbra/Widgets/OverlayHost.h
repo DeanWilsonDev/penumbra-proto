@@ -86,6 +86,8 @@ private:
     std::unique_ptr<WidgetBase> Root;
     std::vector<Overlay>        Overlays;
     OverlayId                   NextId{1};
+    bool                        DispatchingOverlayInput{false};
+    std::vector<OverlayId>      PendingDismissals;
 };
 
 } // namespace Penumbra::Widgets

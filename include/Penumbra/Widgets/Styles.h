@@ -137,4 +137,20 @@ struct CheckboxStyle : BoxStyle {
     Render::Color ColorBoxChecked{0, 0, 0, 0};
 };
 
+// All values are consumer supplied. DropdownStyle separates the trigger's ordinary
+// BoxStyle slice from the independently-painted popover and row surfaces.
+struct DropdownStyle : BoxStyle {
+    BoxStyle      Menu{};
+    BoxStyle      Row{};
+    BoxStyle      SelectedRow{};
+    Render::Color ColorText{0, 0, 0, 0};
+    Render::Color ColorTextHighlighted{0, 0, 0, 0};
+    float         TriggerContentSizeLogical{0.0f};
+    float         RowHeightLogical{0.0f};
+    float         LeadingVisualSizeLogical{0.0f};
+    float         LeadingVisualGapLogical{0.0f};
+    float         MinimumOpenWidthLogical{0.0f};
+    float         OpenTransitionSeconds{0.0f};
+};
+
 } // namespace Penumbra::Widgets
