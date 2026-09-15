@@ -16,6 +16,11 @@ namespace nyx::host {
 template <>
 class NyxBridge<Penumbra::Application> : public Penumbra::Application, public NyxBridgeBase {
 public:
+    Penumbra::Point* GetWindowLogicalSizeForNyx() {
+        WindowLogicalSize = Penumbra::Application::GetWindowLogicalSize();
+        return &WindowLogicalSize;
+    }
+
     bool OnStart() override {
         if (std::optional<runtime::Value> Result = Invoke("OnStart")) {
             return FromValue<bool>(*Result);
@@ -40,6 +45,9 @@ public:
             Penumbra::Application::OnDpiScaleChanged(NewDpiScaleFactor);
         }
     }
+
+private:
+    Penumbra::Point WindowLogicalSize;
 };
 
 } // namespace nyx::host
@@ -47,6 +55,29 @@ public:
 namespace Penumbra::Nyx {
 
 namespace {
+
+float PointX(const Point& Value) { return Value.X; }
+float PointY(const Point& Value) { return Value.Y; }
+
+Point* GetWindowLogicalSizeForNyx(Application& Self) {
+    auto& Bridge = static_cast<::nyx::host::NyxBridge<Application>&>(Self);
+    return Bridge.GetWindowLogicalSizeForNyx();
+}
+
+Render::IFontBackend* GetFontBackendForNyx(Application& Self) { return &Self.GetFontBackend(); }
+
+LifecycleRegistry* GetLifecycleRegistryForNyx(Application& Self) { return &Self.GetLifecycleRegistry(); }
+
+void SetRootWidgetFromNyx(Application& Self, Widgets::WidgetBase* Root) {
+    Self.SetRootWidget(std::unique_ptr<Widgets::WidgetBase>(Root));
+}
+
+template <typename T>
+const ::nyx::runtime::TypeDescriptor* RegisterOpaqueType(::nyx::host::NyxRuntime& Runtime,
+                                                          const std::string& Name) {
+    Runtime.RegisterType<T>(Name);
+    return std::get<std::shared_ptr<::nyx::runtime::HostObject>>(Runtime.Globals().at(Name).data)->descriptor;
+}
 
 // Keeps the NyxRuntime (owns the InheritableTypeDescriptor a bridged
 // instance's Nyx super calls stay resolvable against) and every Interpreter
@@ -84,7 +115,28 @@ Application* MountApplication(
     std::vector<std::shared_ptr<::nyx::interpreter::Interpreter>>& Interpreters,
     const std::string& Source, const std::string& Filename, const std::string& ApplicationClassName) {
     if (!TypeRegistered) {
+        Runtime.RegisterType<Point>("PenumbraPoint").Method("X", &PointX).Method("Y", &PointY);
+        const auto* PointDescriptor =
+            std::get<std::shared_ptr<::nyx::runtime::HostObject>>(Runtime.Globals().at("PenumbraPoint").data)
+                ->descriptor;
+        const auto* FontBackendDescriptor =
+            RegisterOpaqueType<Render::IFontBackend>(Runtime, "PenumbraFontBackend");
+        const auto* LifecycleRegistryDescriptor =
+            RegisterOpaqueType<LifecycleRegistry>(Runtime, "PenumbraLifecycleRegistry");
+        const auto* WidgetDescriptor = RegisterOpaqueType<Widgets::WidgetBase>(Runtime, "PenumbraWidget");
+
         Runtime.RegisterInheritableType<Application>("Application")
+            .Method("RequestQuit", &Application::RequestQuit)
+            .PointerMethod("GetWindowLogicalSize", &GetWindowLogicalSizeForNyx, PointDescriptor)
+            .Method("GetDpiScaleFactor", &Application::GetDpiScaleFactor)
+            .PointerMethod("GetFontBackend", &GetFontBackendForNyx, FontBackendDescriptor)
+            .Method("SetTextInputActive", &Application::SetTextInputActive)
+            .Method("SetRootWidget", &SetRootWidgetFromNyx)
+            .PointerMethod("GetRootWidget", &Application::GetRootWidget, WidgetDescriptor)
+            .Method("GetRootWidgetConsumedInputThisFrame",
+                    &Application::GetRootWidgetConsumedInputThisFrame)
+            .PointerMethod("GetLifecycleRegistry", &GetLifecycleRegistryForNyx,
+                           LifecycleRegistryDescriptor)
             .Override("OnStart", +[](Application& Self) -> bool { return Self.Application::OnStart(); })
             .Override("OnUpdate",
                       +[](Application& Self, float DeltaSeconds) { Self.Application::OnUpdate(DeltaSeconds); })

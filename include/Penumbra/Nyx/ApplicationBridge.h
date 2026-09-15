@@ -35,6 +35,18 @@ namespace Penumbra::Nyx {
 // see the .cpp file), so `delete app` in EntryPoint.h's main() is all the
 // caller needs to do. Returns nullptr if Source fails to parse/interpret, or
 // ApplicationClassName doesn't name a class extending "Application".
+//
+// A mounted Nyx subclass can call Application's non-virtual host methods
+// directly. The bridge exposes RequestQuit, GetWindowLogicalSize (returning a
+// PenumbraPoint handle with X()/Y()), GetDpiScaleFactor, GetFontBackend,
+// SetTextInputActive, SetRootWidget, GetRootWidget,
+// GetRootWidgetConsumedInputThisFrame, and GetLifecycleRegistry. Font backend,
+// lifecycle registry, and widget results are opaque host handles intended to be
+// passed to other functions/types registered on the same NyxRuntime.
+// SetRootWidget takes ownership of a PenumbraWidget handle; the producer must
+// have released its own ownership before returning that handle to Nyx, and the
+// script must not use the consumed handle afterward. Passing null unmounts the
+// current root.
 Application* LoadApplication(const std::string& Source, const std::string& Filename,
                              const std::string& ApplicationClassName);
 
