@@ -31,14 +31,10 @@ struct ApplicationConfig {
 // hooks below to build and drive its own widget tree -- everything a hand-rolled
 // main.cpp previously did itself (window/renderer construction, DPI-scale
 // tracking, the frame loop) now lives here once instead of duplicated per app
-// (docs/next_steps.md's "Application base class" entry). This is also the shape a
-// Nyx script's own entry-point class will eventually inherit from, once
-// nyx-proto's RegisterInheritableType/NyxBridge wiring is added for this type (not
-// yet done -- see that same next_steps.md entry).
+// (docs/next_steps.md's "Application base class" entry).
 //
-// This remains the only place Penumbra talks to a widget-owning runtime (Iris,
-// later Umbra Engine) -- entirely through IWidgetLifecycle, never a concrete
-// include.
+// External widget-owning runtimes integrate through IWidgetLifecycle, never a
+// concrete runtime include.
 class Application {
 public:
     Application();
@@ -63,14 +59,9 @@ public:
     void RegisterLifecycle(IWidgetLifecycle* Lifecycle);
     void UnregisterLifecycle(IWidgetLifecycle* Lifecycle);
 
-    // Public for the same reason SetOnRenderHook/SetOnUpdateHook/
-    // GetFontBackend/etc. above are: a caller that only holds an
-    // Application* obtained from Penumbra::Nyx::LoadApplication/
-    // LoadApplicationFromFile has no subclassing point, but a reconciler
-    // wiring component lifecycles against "whatever host is available"
-    // (e.g. penumbra-ui-backend's BuildContext::LifecycleHost) needs a
-    // Penumbra::LifecycleRegistry* either way -- this accessor lets an
-    // Application-backed host hand one over
+    // Public so a reconciler wiring component lifecycles against whatever
+    // host is available can obtain the registry without subclass access. This
+    // lets an Application-backed host hand one over
     // (&App->GetLifecycleRegistry()) exactly the same way a hand-rolled,
     // non-Application host would hand over a LifecycleRegistry it
     // constructed and Tick()s itself, so BuildContext::LifecycleHost can be
@@ -78,14 +69,8 @@ public:
     // uniformly.
     [[nodiscard]] LifecycleRegistry& GetLifecycleRegistry();
 
-    // Public (not protected, unlike Configure/OnRender below) because
-    // nyx-proto's RegisterInheritableType<T>::Override wires a Nyx super call
-    // to a plain qualified call (`self.Application::OnStart()`) from a free
-    // function outside the class hierarchy, which C++ only allows on public
-    // members (Penumbra/Nyx/ApplicationBridge.h, docs/next_steps.md's
-    // "Application base class" entry) -- these four are exactly the hooks
-    // that bridge, since nyx-proto's marshalling only supports primitive
-    // args/returns (bool/int/float/double/string/void) today.
+    // Public so adapters can dispatch lifecycle hooks through an Application*
+    // without requiring a second framework-specific subclass.
 
     // Called once, after the window/renderer/font backend are ready. Build the
     // widget tree here. Returning false aborts Run() before the frame loop starts
@@ -93,7 +78,7 @@ public:
     virtual bool OnStart() { return true; }
 
     // Called once per frame, before OnRender. Registered IWidgetLifecycle::OnTick
-    // has already fired by the time this runs -- reconcile (e.g. iris::Tick()) here.
+    // has already fired by the time this runs; reconcile external state here.
     // If a root widget has been handed to SetRootWidget(), Run() itself calls
     // Measure/Arrange/UpdateInteractionState on it immediately after this returns --
     // an override does not need (and should not duplicate) that sequence by hand.
@@ -112,12 +97,8 @@ public:
 
     // Host-supplied alternative to overriding OnRender(). Takes priority over the
     // virtual OnRender() when set (Run()'s frame loop checks HasRenderHook()
-    // first). Exists for callers that only hold an Application* obtained from
-    // Penumbra::Nyx::LoadApplication/LoadApplicationFromFile -- a Nyx-authored
-    // subclass can't override OnRender() itself (not bridgeable, see
-    // Penumbra/Nyx/ApplicationBridge.h), but the C++ host loading it can still
-    // draw by calling SetOnRenderHook directly on the returned pointer, no
-    // subclassing point needed. Works identically for a plain C++ subclass too.
+    // first). Lets an external host supply rendering without introducing an
+    // application subclass.
     using RenderHook = std::function<void(Render::Renderer&)>;
     void                     SetOnRenderHook(RenderHook Hook);
     [[nodiscard]] bool       HasRenderHook() const;
@@ -125,31 +106,20 @@ public:
     // Host-supplied alternative to overriding OnUpdate(). Takes priority over the
     // virtual OnUpdate() when set (Run()'s frame loop checks HasUpdateHook()
     // first), and -- unlike OnUpdate() -- is handed this frame's InputState, which
-    // is otherwise unreachable outside Application's own member functions (GetInput()
-    // is protected). Exists for the same reason SetOnRenderHook does: a caller that
-    // only holds an Application* obtained from Penumbra::Nyx::LoadApplication/
-    // LoadApplicationFromFile has no subclassing point to reach InputState from, but
-    // still needs it to drive WidgetBase::UpdateInteractionState on a tree it mounts
-    // externally (docs/next_steps.md's "no way to reach InputState" entry). Works
-    // identically for a plain C++ subclass too.
+    // is otherwise unreachable outside Application's own member functions
+    // (GetInput() is protected). This lets an external host drive interaction
+    // state on a mounted widget tree without subclass access.
     using UpdateHook = std::function<void(float, const Platform::InputState&)>;
     void                     SetOnUpdateHook(UpdateHook Hook);
     [[nodiscard]] bool       HasUpdateHook() const;
 
-    // Public (not protected, unlike GetWindow/GetRenderer/GetInput/GetConfig
-    // below) for the same reason SetOnRenderHook/SetOnUpdateHook are: a caller
-    // that only holds an Application* obtained from Penumbra::Nyx::LoadApplication/
-    // LoadApplicationFromFile has no subclassing point, but still needs an
-    // IFontBackend* to measure text/load fonts before mounting a widget tree
-    // externally (docs/next_steps.md's "no way to reach IFontBackend" entry).
+    // Public so an external tree builder can measure text and load fonts before
+    // mounting a widget tree.
     // Unlike the two hooks above, this isn't tied to a per-frame cadence -- a
     // caller only needs it once, so a bare accessor is enough; no hook required.
     [[nodiscard]] Render::IFontBackend& GetFontBackend();
 
-    // Public for the same reason GetFontBackend() is: a caller that only holds
-    // an Application* obtained from Penumbra::Nyx::LoadApplication/
-    // LoadApplicationFromFile has no subclassing point, but still needs the
-    // current DPI scale factor to load DPI-correct fonts and detect
+    // Public so an external tree builder can load DPI-correct fonts and detect
     // display-DPI changes (docs/next_steps.md's "GetWindow/GetRenderer and
     // DPI scaling" entry). Forwards to the Renderer's own scale factor, which
     // Run() keeps synced to the window's every frame before OnDpiScaleChanged
@@ -157,10 +127,7 @@ public:
     // for this, so neither is made public here.
     [[nodiscard]] float GetDpiScaleFactor() const;
 
-    // Public for the same reason GetFontBackend()/GetDpiScaleFactor() are: a
-    // caller that only holds an Application* obtained from
-    // Penumbra::Nyx::LoadApplication/LoadApplicationFromFile has no
-    // subclassing point, but still needs to enable SDL text-input mode for
+    // Public so an external input adapter can enable SDL text-input mode for
     // the window before typed characters reach InputState::TextInputThisFrame
     // at all (docs/next_steps.md's "no way to enable SDL text-input mode"
     // entry). Not tied to a per-frame cadence -- a caller only needs to call
@@ -168,16 +135,10 @@ public:
     // per-frame check -- so a bare accessor is enough; no hook required.
     void SetTextInputActive(bool Active);
 
-    // Public for the same reason GetFontBackend()/GetDpiScaleFactor() are: a
-    // caller that only holds an Application* obtained from
-    // Penumbra::Nyx::LoadApplication/LoadApplicationFromFile has no
-    // subclassing point, but still needs the live window size to Measure/
-    // Arrange its externally-mounted widget tree against something other
-    // than a compile-time guess (docs/next_steps.md's "no way to read the
-    // current window size" entry). Forwards to the window itself, the same
-    // way src/main.cpp's hand-rolled frame loop already does -- not
-    // GetWindow(), which stays protected; this is the narrow public slice of
-    // it a Nyx-loaded caller needs.
+    // Public so an external tree builder can Measure/Arrange against the live
+    // window size instead of a compile-time guess. Forwards to the window
+    // itself rather than exposing GetWindow(); this is the narrow public
+    // geometry API.
     [[nodiscard]] Point GetWindowLogicalSize() const;
 
     // Takes ownership of Root. Once set, Run()'s own frame loop calls
@@ -185,17 +146,14 @@ public:
     // right after OnUpdate (hook or virtual) returns, sized against
     // GetWindowLogicalSize() -- and Draw()s it every frame too, right after
     // Renderer::BeginFrame, before OnRender (hook or virtual) runs. This is the
-    // same sequence a hand-rolled frame loop drives itself today (see
-    // pharos-proto/src/nyx_app/main.cpp's updateWidgetTree()); once a root is
-    // mounted here, the app no longer needs its own copy of it. Passing nullptr
+    // same sequence a hand-rolled frame loop would otherwise drive itself;
+    // once a root is mounted here, the app no longer needs its own copy of it.
+    // Passing nullptr
     // un-mounts the current root (if any) and destroys it, matching
     // unique_ptr's own reset() semantics. Public, not protected, for the same
-    // reason SetOnRenderHook/SetOnUpdateHook are: a caller that only holds an
-    // Application* obtained from Penumbra::Nyx::LoadApplication/
-    // LoadApplicationFromFile has no subclassing point of its own -- this is
-    // expected to be called by penumbra-ui-backend's own mount code once it has
-    // built a real tree via BuildWidgetTree/IrisNyxDriver, not by this repo
-    // growing its own .irisx-parsing knowledge.
+    // reason SetOnRenderHook/SetOnUpdateHook are: an external tree builder can
+    // mount a real widget tree without subclass access or Penumbra acquiring
+    // knowledge of its composition language.
     void SetRootWidget(std::unique_ptr<Widgets::WidgetBase> Root);
 
     // The widget last handed to SetRootWidget(), or nullptr if none is mounted.
@@ -212,13 +170,11 @@ public:
     [[nodiscard]] bool GetRootWidgetConsumedInputThisFrame() const;
 
 protected:
-    // Fills Config before the window/renderer are constructed. Not bridged to
-    // Nyx (see the public block above): ApplicationConfig& isn't a
-    // marshallable argument type.
+    // Fills Config before the window/renderer are constructed.
     virtual void Configure(ApplicationConfig& Config) {}
 
     // Called once per frame, between Renderer::BeginFrame and EndFrameAndPresent.
-    // Draw the widget tree here. Not bridged to Nyx, same reason as Configure.
+    // Draw the widget tree here.
     virtual void OnRender(Render::Renderer& Renderer) {}
 
     [[nodiscard]] Platform::PlatformWindow&   GetWindow();

@@ -21,10 +21,8 @@ public:
     std::string           Text;
     Render::Color         ColorText{0, 0, 0, 0};
 
-    // Lustre's `max-width`/`text-overflow` (docs/
-    // penumbra_iris_lustre_componentization_gaps_requirements.md's
-    // InspectorRow migration finding -- no truncation concept existed
-    // before this). Unset MaxWidthLogical means "no constraint," the
+    // Optional width constraint and overflow behavior. Unset MaxWidthLogical
+    // means "no constraint," the
     // current unbounded-intrinsic-size behavior. Set with
     // TruncateWithEllipsis false means "clip, no dots" (a Renderer clip
     // rect); true means "truncate and append .." -- both plain fields
@@ -33,9 +31,7 @@ public:
     std::optional<float> MaxWidthLogical;
     bool                  TruncateWithEllipsis{false};
 
-    // Fluent, chainable construction — see Box::Builder for the naming-convention
-    // rationale (method names match Iris prop names exactly, className() aside).
-    // Adds text() for Iris <Text>'s own content prop on top of the shared set.
+    // Fluent, chainable construction; adds text() to the shared Box builder set.
     class Builder {
     public:
         Builder();

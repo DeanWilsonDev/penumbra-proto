@@ -54,9 +54,8 @@ public:
     virtual std::size_t GetChildCount() const { return 0; }
     virtual WidgetBase* GetChildAt(std::size_t Index) const { return nullptr; }
 
-    // Generic pointer/focus/value callbacks any widget can opt into — this is what
-    // lets a plain Box act as an interactive Iris <Frame onPress=.../>, not just
-    // dedicated subclasses like Button/Checkbox with their own typed callbacks. All
+    // Generic pointer/focus/value callbacks any widget can opt into, including a
+    // plain Box rather than only dedicated interactive subclasses. All
     // null by default: a widget with none set is exactly as inert as before this
     // existed, and dispatch skips hit-testing entirely rather than paying for it
     // (see Box::UpdateInteractionState).
@@ -74,10 +73,9 @@ public:
     // in its own destructor.
     std::function<void()> OnDestroyed = nullptr;
 
-    // Inert storage for Iris's `class` prop (its Lustre-lite class-selector
-    // resolution isn't designed yet — see docs/iris_handoff.md §7). Penumbra
-    // holds the string and does nothing with it, consistent with "no defaults,
-    // no opinions": styling by class name is entirely a future Iris concern.
+    // Inert class-name storage. Penumbra holds the string and does nothing with
+    // it, consistent with "no defaults, no opinions"; interpretation belongs to
+    // the consumer.
     std::string ClassName;
 
     void SetIsEnabled(bool Enabled) { IsEnabled = Enabled; }

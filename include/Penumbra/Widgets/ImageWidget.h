@@ -34,9 +34,8 @@ public:
 
     ~ImageWidget() override;
 
-    // Fluent, chainable construction — see Box::Builder for the naming-convention
-    // rationale (method names match Iris prop names exactly). Deliberately
-    // narrow: just src() (Iris <Image>'s content prop) and className() — no
+    // Fluent, chainable construction. Deliberately narrow: just src() and
+    // className(); no
     // child()/children() (a leaf; GetChildCount/GetChildAt inherit WidgetBase's
     // zero/nullptr default) and no onPress()/onRelease()/etc, per the ImageWidget
     // requirements doc's own builder method table.

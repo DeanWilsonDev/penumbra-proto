@@ -488,10 +488,7 @@ void Box::Draw(Render::Renderer& Renderer) {
     }
 
     // GradientTop set (alpha != 0) wins over the flat ColorBackground fill --
-    // same "one or the other, gradient takes priority" rule the resolver-side
-    // Lustre mapping documents (a rule that sets background-gradient-start/-end
-    // also sets background-color as a solid fallback would be unusual, but this
-    // avoids drawing both on top of each other if it happens).
+    // gradient takes priority, avoiding two fills when a consumer sets both.
     const Render::Color Background = BackgroundForState();
     const Render::Color GradientTop = GradientTopForState();
     if (GradientTop.A != 0) {

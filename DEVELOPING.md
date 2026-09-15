@@ -9,19 +9,16 @@ Penumbra is a retained-mode C++20 UI framework built on SDL3's `SDL_Renderer`
 path. The repository contains:
 
 - `include/Penumbra/`: public headers, grouped by platform, rendering,
-  backends, widgets, animation, and the optional Nyx bridge.
+  backends, widgets, and animation.
 - `src/Penumbra/`: implementations. Keep paths paired with their public
   headers where applicable.
 - `demo/`: the normal C++ demo and the theme/style values used to exercise the
   library.
-- `demo_nyx/`: the optional Nyx-backed demo.
 - `docs`: a tracked symlink to the separate `penumbra-ui-library`
   documentation repository. It may be absent or broken in a standalone clone.
   Treat its contents as design context, not as files owned by this repository.
 
-`penumbra` is the core static library. `penumbra_demo` is the default runnable
-target. With `PENUMBRA_WITH_NYX=ON`, CMake also builds
-`penumbra_nyx_bridge` and `penumbra_demo_nyx` and fetches `nyx-proto`.
+`penumbra` is the core static library. `penumbra_demo` is the runnable example.
 
 ## Architectural constraints
 
@@ -36,8 +33,8 @@ target. With `PENUMBRA_WITH_NYX=ON`, CMake also builds
   consuming app; this repository's example is `demo/DemoTheme.*`.
 - Preserve the retained-mode frame flow: measure, arrange, update interaction
   state, then draw.
-- Keep the core library independent of `demo/` and Nyx. Nyx integration must
-  remain behind `PENUMBRA_WITH_NYX`.
+- Keep the core library independent of `demo/` and application languages.
+  Language and declarative-UI integrations belong in their backend repositories.
 - Public names use `PascalCase`, including methods and local variables. The
   namespace is `Penumbra`; do not introduce Unreal-style type prefixes.
 
@@ -62,18 +59,6 @@ There is currently no automated test target. For normal code changes, a clean
 configure and build is the minimum validation. Run the demo when behavior or
 rendering changes and report anything that could not be exercised in the
 current environment.
-
-Validate the optional integration separately when changing `include/Penumbra/Nyx/`,
-`src/Penumbra/Nyx/`, its CMake wiring, or shared APIs used by that bridge:
-
-```sh
-cmake -S . -B build-nyx -DCMAKE_BUILD_TYPE=Debug -DPENUMBRA_WITH_NYX=ON
-cmake --build build-nyx
-./build-nyx/demo_nyx/penumbra_demo_nyx
-```
-
-The Nyx configure step needs network access unless CMake already has the
-dependency available.
 
 ## Change hygiene
 

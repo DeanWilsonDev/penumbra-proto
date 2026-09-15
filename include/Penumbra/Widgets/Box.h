@@ -62,13 +62,8 @@ public:
     std::size_t GetChildCount() const override { return Children.size(); }
     WidgetBase* GetChildAt(std::size_t Index) const override { return Children[Index].get(); }
 
-    // Fluent, chainable construction for Iris's Penumbra backend codegen: method
-    // names match Iris prop names exactly (the Iris preprocessor does a
-    // mechanical prop-name -> builder-method-name translation), except
-    // className() — class is a reserved word, so Iris's codegen maps its
-    // `class` prop to this name specifically; there is no other divergence.
-    // Owns the widget being built until build() transfers it out; not meant to
-    // outlive that call.
+    // Fluent, chainable construction. Owns the widget until build() transfers
+    // it out; not meant to outlive that call.
     class Builder {
     public:
         Builder();

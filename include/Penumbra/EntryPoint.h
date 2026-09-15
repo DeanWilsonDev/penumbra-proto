@@ -11,12 +11,9 @@
 // main() itself, same as Application::Run() now owns the frame loop
 // (docs/next_steps.md's "Application base class" entry).
 //
-// This works completely unchanged whether CreateApplication() returns a plain
-// C++ Application subclass, or a Nyx-bridged one built via
-// Penumbra::Nyx::LoadApplication/LoadApplicationFromFile
-// (Penumbra/Nyx/ApplicationBridge.h, PENUMBRA_WITH_NYX only) -- Run() dispatches
-// through Application's own virtual hooks either way, so this entry point has no
-// Nyx-specific case to add.
+// CreateApplication may return any concrete Application implementation. Run()
+// dispatches through Application's virtual hooks without requiring the entry
+// point to know how that implementation was produced.
 extern Penumbra::Application* CreateApplication();
 
 int main() {

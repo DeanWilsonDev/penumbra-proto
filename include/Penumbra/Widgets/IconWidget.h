@@ -9,9 +9,8 @@
 namespace Penumbra::Widgets {
 
 // A leaf widget that draws a single named vector glyph through an app-supplied
-// IIconBackend — the Penumbra-side half of Iris's `<Icon icon="...">` (docs/
-// penumbra_iris_lustre_componentization_gaps_requirements.md §1). A WidgetBase
-// subclass directly, same as ImageWidget: no box model of its own. Unlike
+// IIconBackend. A WidgetBase subclass directly, same as ImageWidget: no box model
+// of its own. Unlike
 // ImageWidget there is no separate load step — IconBackend is a plain public field
 // (mirroring how Walker.cpp already sets Label::FontBackend/Font directly post-build,
 // not through the Builder), and Draw() calls it fresh every frame since an icon is
@@ -48,17 +47,14 @@ public:
 
     InteractionState GetInteractionState() const { return CurrentState; }
 
-    // Fluent, chainable construction — see ImageWidget::Builder for the naming-
-    // convention rationale. Deliberately narrow: icon()/size() (Iris <Icon>'s own
-    // props) and className() — no child()/children() (a leaf) and no onPress()/etc,
-    // matching <Icon>'s own prop list in docs/iris_core_spec.md §3.1.
+    // Fluent, chainable construction. Deliberately narrow: icon(), size(), and
+    // className(); no child()/children() because this is a leaf.
     class Builder {
     public:
         Builder();
 
         Builder& icon(std::string Value);
-        // Overrides SizeLogical's 16px default -- <Icon size={...}> (docs/
-        // iris_core_spec.md §3.1), unset means "use the default".
+        // Overrides SizeLogical's 16px default; unset means "use the default".
         Builder& size(float Value);
         Builder& className(std::string Value);
 

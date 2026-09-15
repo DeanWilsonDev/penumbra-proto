@@ -31,8 +31,7 @@ public:
     Point Measure(Point AvailableSizeLogical) override;
     void  Arrange(Rect FinalRectLogical) override;
 
-    // Fluent, chainable construction — see Box::Builder for the naming-convention
-    // rationale (method names match Iris prop names exactly, className() aside).
+    // Fluent, chainable construction; see Box::Builder.
     class Builder {
     public:
         Builder();

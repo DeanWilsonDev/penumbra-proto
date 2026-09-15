@@ -17,8 +17,7 @@ struct EdgeInsets {
 // child ("Fill") shares whatever's left after Leading + ChildGap. Unlike
 // VerticalStack/HorizontalStack, this mode's own Box::Measure() reports back the
 // full available size (greedy) rather than the sum of its children's sizes --
-// matching the hand-rolled FixedLeadingStrip composite (pharos-proto's
-// src/ui/layout_helpers.h) this generalizes: a fixed-height leading child (a
+// allowing a fixed-height leading child (a
 // toolbar, a header) above a greedy fill child (a SplitPanel/ViewportWidget,
 // which itself reports "whatever I'm given" as its own desired size) can't be
 // expressed by VerticalStack, which hands every child the same undiminished
@@ -27,18 +26,13 @@ enum class LayoutMode { None, VerticalStack, HorizontalStack, FixedLeadingStack 
 enum class CrossAlign { Start, Center, End, Stretch };
 
 // Main-axis distribution for VerticalStack/HorizontalStack, parallel to CrossAlign's
-// cross-axis alignment above -- mirrors lustre's own Lustre::Justify (ResolvedStyle.h)
-// exactly, the CSS `justify-content` property this exists to satisfy (docs/next_steps.md:
-// pharos-proto's ThreeZoneRow -- a hand-rolled left/center/right-justified row -- exists
-// only because Box::Arrange had no main-axis distribution, only sequential packing from
-// the start). Start is the default and reproduces every existing Box's behavior exactly
+// cross-axis alignment above. Start is the default and reproduces sequential packing
 // (sequential packing from Content's main-axis start, ChildGap between siblings, no other
 // change) -- Center/End/SpaceBetween are opt-in via Box::JustifyContentMode. Not
 // meaningful for FixedLeadingStack (that layout's two slots are sized directly by
 // LeadingExtentLogical/the remainder, not distributed) or LayoutMode::None (no children
 // laid out at all). No SpaceAround/SpaceEvenly -- not requested by any real consumer;
-// `justify-content`'s four keyword values are the concrete ask, not a full
-// flexbox-equivalent distribution model (see this repo's docs/next_steps.md).
+// This is intentionally not a full flexbox-equivalent distribution model.
 enum class Justify { Start, Center, End, SpaceBetween };
 
 // The universal style slots — the "tokens" every widget honours. Penumbra defines
@@ -54,9 +48,8 @@ struct BoxStyle {
     EdgeInsets    Margin{0.0f, 0.0f, 0.0f, 0.0f};  // outside the border — the PARENT's job
 
     // A top-to-bottom two-stop gradient fill, drawn via Renderer::DrawGradientRect
-    // instead of the flat ColorBackground fill above when GradientTop.A != 0 (docs/
-    // penumbra_iris_lustre_componentization_gaps_requirements.md §2 -- Lustre's
-    // `background-gradient-start`/`-end`). Zero-alpha (the default) means "no
+    // instead of the flat ColorBackground fill above when GradientTop.A != 0.
+    // Zero-alpha (the default) means "no
     // gradient, use ColorBackground" -- the same "alpha is the presence flag"
     // convention ColorBackground/ColorBorder above already use, so a Box with
     // neither set still draws nothing extra.
@@ -80,9 +73,8 @@ struct BoxStyle {
     Render::Color ShadowColor{0, 0, 0, 0};
     float         ShadowBlurRadiusLogical{0.0f};
 
-    // Interaction-state background overrides -- universal (not Button-only) so
-    // Lustre's :hover/:active/:disabled selectors have somewhere to land on any
-    // classed element, matching how OnPressed/OnHovered/etc. on WidgetBase already
+    // Interaction-state background overrides are universal (not Button-only),
+    // matching how OnPressed/OnHovered/etc. on WidgetBase already
     // aren't Button-exclusive. Zero alpha (the default) means "no override for this
     // state, keep ColorBackground"
     // -- the same presence-flag convention GradientTop/ColorBackground use above.
@@ -91,10 +83,7 @@ struct BoxStyle {
     Render::Color ColorBackgroundDisabled{0, 0, 0, 0};
 
     // Interaction-state border-color overrides, same presence-flag convention and
-    // rationale as ColorBackgroundHovered/Pressed/Disabled above -- unblocks Lustre
-    // `:hover`/`:active`/`:disabled { border-color: ... }` on any classed element
-    // (see docs/next_steps.md's ColorBorderHovered entry for the motivating case,
-    // pharos-proto's ColorFilterDropdown trigger).
+    // rationale as ColorBackgroundHovered/Pressed/Disabled above.
     Render::Color ColorBorderHovered{0, 0, 0, 0};
     Render::Color ColorBorderPressed{0, 0, 0, 0};
     Render::Color ColorBorderDisabled{0, 0, 0, 0};
@@ -105,15 +94,12 @@ struct BoxStyle {
     // the mouse point so clicking/hovering tracks the visual position, not the
     // untransformed layout rect. Layout itself (Measure/Arrange, siblings' positions)
     // is unaffected, matching CSS: transform never reflows. One flat value, not a
-    // per-state Hovered/Pressed/Disabled trio like the colours above -- resolving e.g.
-    // Lustre's `:active { transform: scale(0.97) }` into this field per frame is a
-    // resolver-side concern once the primitive exists, not something Penumbra itself
-    // needs to track multiple copies of.
+    // per-state Hovered/Pressed/Disabled trio like the colours above. Resolving
+    // state-specific transforms is a consumer concern.
     Penumbra::Transform Transform{};
 
     // An explicit border-box size override, distinct from Measure's usual
-    // content-driven sizing (Lustre's width/height properties). -1 (the default,
-    // "auto") means Measure falls through
+    // content-driven sizing. -1 (the default, "auto") means Measure falls through
     // to its normal intrinsic calculation; a value >= 0 is "be exactly this many
     // logical pixels", Padding/BorderWidth included -- the same total Arrange would
     // otherwise have derived from content. Negative rather than a zero/sentinel-alpha
@@ -129,7 +115,7 @@ struct BoxStyle {
 
 // Per-widget styles extend BoxStyle so the box-model slots stay universal and free.
 struct ButtonStyle : BoxStyle {
-    Render::Color ColorLabel{0, 0, 0, 0}; // applied to a Label child by the resolver, not by Button
+    Render::Color ColorLabel{0, 0, 0, 0}; // applied to a Label child by the consumer, not by Button
 };
 
 struct CheckboxStyle : BoxStyle {
