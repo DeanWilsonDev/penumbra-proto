@@ -2,6 +2,7 @@
 
 #include "Penumbra/Platform/IClipboard.h"
 #include "Penumbra/Render/IFontBackend.h"
+#include "Penumbra/Render/TextWrap.h"
 #include "Penumbra/Widgets/Box.h"
 #include "Penumbra/Widgets/FocusState.h"
 
@@ -63,11 +64,11 @@ private:
     // Ownership of a caret index -- which line a given index belongs to -- extends
     // to the next line's ContentStart, so a byte "consumed" by wrapping (the space
     // a soft break drops, or the '\n' a hard break drops) still resolves to the end
-    // of this line rather than being ambiguous.
-    struct Line {
-        std::size_t ContentStart{0};
-        std::size_t ContentEnd{0};
-    };
+    // of this line rather than being ambiguous. Render::TextLine now (the wrap
+    // algorithm itself moved to Render::WrapText, shared with Label's own Wrap mode)
+    // -- same two fields, aliased rather than redeclared so every existing
+    // Line::ContentStart/ContentEnd use below is untouched.
+    using Line = Render::TextLine;
 
     bool IsFocused() const { return Focus != nullptr && Focus->Focused == this; }
 

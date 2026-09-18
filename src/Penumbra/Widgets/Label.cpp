@@ -1,13 +1,44 @@
 #include "Penumbra/Widgets/Label.h"
 
+#include <string_view>
 #include <utility>
 
 namespace Penumbra::Widgets {
 
-Point Label::MeasureContent(Point /*AvailableContentSize*/) {
+float Label::LineHeight() const {
+    return FontBackend ? FontBackend->MeasureText(Font, "Ag").HeightLogical : 0.0f;
+}
+
+Point Label::MeasureContent(Point AvailableContentSize) {
     if (!FontBackend) {
         return {0.0f, 0.0f};
     }
+
+    if (Wrap) {
+        const std::vector<Render::TextLine> WrappedLines =
+            Render::WrapText(FontBackend, Font, Text, AvailableContentSize.X);
+        // Reports the full available width (a block of wrapped text fills its
+        // container, like CSS `white-space: normal` text does) rather than the
+        // widest actual line -- critical so Arrange's own ChildExtent (Box::
+        // PlaceCross, CrossAlign::Start included) ends up equal to the same width
+        // DrawContent re-wraps against below; a narrower reported width here would
+        // let Arrange shrink this Label below the width its own line count/height
+        // was computed against, reflowing to fewer, longer lines at Draw time than
+        // Measure sized for. Falls back to the widest actual line only when there's
+        // no usable width to wrap against yet (AvailableContentSize.X <= 0), so an
+        // as-yet-unconstrained Label doesn't collapse to a zero-width, all-lines
+        // report.
+        float ReportedWidth = AvailableContentSize.X;
+        if (ReportedWidth <= 0.0f) {
+            for (const Render::TextLine& L : WrappedLines) {
+                ReportedWidth = std::max(
+                    ReportedWidth,
+                    FontBackend->MeasureTextWidth(Font, std::string_view(Text).substr(L.ContentStart, L.ContentEnd - L.ContentStart)));
+            }
+        }
+        return {ReportedWidth, LineHeight() * static_cast<float>(WrappedLines.size())};
+    }
+
     const Render::TextMetrics Metrics = FontBackend->MeasureText(Font, Text);
     float Width = Metrics.WidthLogical;
     // Clamped here (not just at Draw time) so a truncating Label doesn't blow
@@ -21,6 +52,19 @@ Point Label::MeasureContent(Point /*AvailableContentSize*/) {
 }
 
 void Label::DrawContent(Render::Renderer& Renderer, Rect ContentRect) {
+    if (Wrap) {
+        const std::vector<Render::TextLine> WrappedLines = Render::WrapText(FontBackend, Font, Text, ContentRect.W);
+        const float LH = LineHeight();
+        for (std::size_t Index = 0; Index < WrappedLines.size(); ++Index) {
+            const Render::TextLine& L = WrappedLines[Index];
+            if (L.ContentEnd > L.ContentStart) {
+                Renderer.DrawText(Font, std::string_view(Text).substr(L.ContentStart, L.ContentEnd - L.ContentStart),
+                                   {ContentRect.X, ContentRect.Y + static_cast<float>(Index) * LH}, ColorText);
+            }
+        }
+        return;
+    }
+
     if (!MaxWidthLogical || Renderer.MeasureTextWidth(Font, Text) <= *MaxWidthLogical) {
         Renderer.DrawText(Font, Text, {ContentRect.X, ContentRect.Y}, ColorText);
         return;

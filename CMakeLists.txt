@@ -27,6 +27,7 @@ add_library(penumbra STATIC
     src/Penumbra/Platform/PlatformWindow.cpp
     src/Penumbra/Render/Renderer.cpp
     src/Penumbra/Render/SdlTtfFontBackend.cpp
+    src/Penumbra/Render/TextWrap.cpp
     src/Penumbra/Backends/SdlImageBackend.cpp
     src/Penumbra/Widgets/Box.cpp
     src/Penumbra/Widgets/InlineContainer.cpp

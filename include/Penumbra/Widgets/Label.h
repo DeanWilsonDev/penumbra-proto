@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Penumbra/Render/IFontBackend.h"
+#include "Penumbra/Render/TextWrap.h"
 #include "Penumbra/Widgets/Box.h"
 
 #include <functional>
@@ -31,6 +32,18 @@ public:
     std::optional<float> MaxWidthLogical;
     bool                  TruncateWithEllipsis{false};
 
+    // Wrap -- when true, Text reflows across as many lines as it takes to fit
+    // whatever content width MeasureContent/DrawContent are actually given (the
+    // same greedy word-wrap-with-character-fallback TextArea already implements,
+    // Render::WrapText, factored out so both widgets share one algorithm), rather
+    // than the single-line MaxWidthLogical/TruncateWithEllipsis clip-or-ellipsis
+    // behavior above. For static multi-line text that was never meant to be
+    // editable (TextArea's own reason for existing) -- no caret, selection, or
+    // scroll state, just reflow. Mutually exclusive with MaxWidthLogical/
+    // TruncateWithEllipsis in practice (they're two different overflow
+    // strategies); nothing enforces that here, so don't set both.
+    bool                  Wrap{false};
+
     // Fluent, chainable construction; adds text() to the shared Box builder set.
     class Builder {
     public:
@@ -55,6 +68,9 @@ public:
 protected:
     Point MeasureContent(Point AvailableContentSize) override;
     void  DrawContent(Render::Renderer&, Rect ContentRect) override;
+
+private:
+    float LineHeight() const; // same "Ag" ascent/descent probe TextArea::LineHeight uses
 };
 
 } // namespace Penumbra::Widgets
