@@ -8,73 +8,93 @@ namespace Penumbra {
 Application::Application() = default;
 Application::~Application() = default;
 
-int Application::Run() {
+bool Application::Initialize() {
     Configure(Config);
 
     if (!Window.Initialise(Config.Title.c_str(), Config.WindowLogicalWidth, Config.WindowLogicalHeight)) {
-        return 1;
+        return false;
     }
 
     LastKnownDpiScaleFactor = Window.GetDpiScaleFactor();
     if (!Renderer.Initialise(Window.GetSdlRenderer(), LastKnownDpiScaleFactor, &FontBackend)) {
         Window.Shutdown();
-        return 1;
+        return false;
     }
 
     if (!OnStart()) {
         OnShutdown();
         Window.Shutdown();
-        return 1;
+        return false;
     }
 
-    while (!QuitRequested) {
-        if (!Window.PumpEventsAndBuildInput(Input)) break;
+    return true;
+}
 
-        const float CurrentDpiScaleFactor = Window.GetDpiScaleFactor();
-        Renderer.SetDpiScaleFactor(CurrentDpiScaleFactor);
-        if (CurrentDpiScaleFactor != LastKnownDpiScaleFactor) {
-            LastKnownDpiScaleFactor = CurrentDpiScaleFactor;
-            OnDpiScaleChanged(CurrentDpiScaleFactor);
-        }
-
-        Tick(Input.DeltaTimeSeconds);
-        if (HasUpdateHook()) {
-            OnUpdateHookFn(Input.DeltaTimeSeconds, Input);
-        } else {
-            OnUpdate(Input.DeltaTimeSeconds);
-        }
-
-        // The Measure/Arrange/UpdateInteractionState pass a hand-rolled frame loop
-        // (e.g. pharos-proto's own updateWidgetTree()) would otherwise have to drive
-        // itself -- runs automatically once a root is mounted via SetRootWidget(),
-        // sized against the live window rather than a compile-time guess, same as
-        // that hand-rolled call site does via GetWindowLogicalSize().
-        if (RootWidget) {
-            const Point WindowSize = Window.GetLogicalWindowSize();
-            const Rect  WindowRect{0.0f, 0.0f, WindowSize.X, WindowSize.Y};
-            RootWidget->Measure(WindowSize);
-            RootWidget->Arrange(WindowRect);
-            RootWidgetConsumedInputThisFrame = RootWidget->UpdateInteractionState(Input);
-        } else {
-            RootWidgetConsumedInputThisFrame = false;
-        }
-
-        Renderer.BeginFrame(Config.ClearColor);
-        // Drawn before OnRender/the render hook so any extra host-side drawing (e.g.
-        // a debug overlay) layers on top of the mounted tree rather than under it.
-        if (RootWidget) {
-            RootWidget->Draw(Renderer);
-        }
-        if (HasRenderHook()) {
-            OnRenderHookFn(Renderer);
-        } else {
-            OnRender(Renderer);
-        }
-        Renderer.EndFrameAndPresent();
+bool Application::RunOneFrame() {
+    if (QuitRequested) {
+        return false;
+    }
+    if (!Window.PumpEventsAndBuildInput(Input)) {
+        return false;
     }
 
+    const float CurrentDpiScaleFactor = Window.GetDpiScaleFactor();
+    Renderer.SetDpiScaleFactor(CurrentDpiScaleFactor);
+    if (CurrentDpiScaleFactor != LastKnownDpiScaleFactor) {
+        LastKnownDpiScaleFactor = CurrentDpiScaleFactor;
+        OnDpiScaleChanged(CurrentDpiScaleFactor);
+    }
+
+    Tick(Input.DeltaTimeSeconds);
+    if (HasUpdateHook()) {
+        OnUpdateHookFn(Input.DeltaTimeSeconds, Input);
+    } else {
+        OnUpdate(Input.DeltaTimeSeconds);
+    }
+
+    // The Measure/Arrange/UpdateInteractionState pass a hand-rolled frame loop
+    // (e.g. pharos-proto's own updateWidgetTree()) would otherwise have to drive
+    // itself -- runs automatically once a root is mounted via SetRootWidget(),
+    // sized against the live window rather than a compile-time guess, same as
+    // that hand-rolled call site does via GetWindowLogicalSize().
+    if (RootWidget) {
+        const Point WindowSize = Window.GetLogicalWindowSize();
+        const Rect  WindowRect{0.0f, 0.0f, WindowSize.X, WindowSize.Y};
+        RootWidget->Measure(WindowSize);
+        RootWidget->Arrange(WindowRect);
+        RootWidgetConsumedInputThisFrame = RootWidget->UpdateInteractionState(Input);
+    } else {
+        RootWidgetConsumedInputThisFrame = false;
+    }
+
+    Renderer.BeginFrame(Config.ClearColor);
+    // Drawn before OnRender/the render hook so any extra host-side drawing (e.g.
+    // a debug overlay) layers on top of the mounted tree rather than under it.
+    if (RootWidget) {
+        RootWidget->Draw(Renderer);
+    }
+    if (HasRenderHook()) {
+        OnRenderHookFn(Renderer);
+    } else {
+        OnRender(Renderer);
+    }
+    Renderer.EndFrameAndPresent();
+
+    return !QuitRequested;
+}
+
+void Application::Shutdown() {
     OnShutdown();
     Window.Shutdown();
+}
+
+int Application::Run() {
+    if (!Initialize()) {
+        return 1;
+    }
+    while (RunOneFrame()) {
+    }
+    Shutdown();
     return 0;
 }
 

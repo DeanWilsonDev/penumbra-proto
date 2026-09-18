@@ -45,11 +45,48 @@ public:
     // OnUpdate/OnRender once per frame) -> OnShutdown. Runs until the OS requests
     // quit or RequestQuit() is called; blocks for the application's whole
     // lifetime. Returns 1 if window/renderer construction failed or OnStart
-    // returned false, 0 otherwise.
+    // returned false, 0 otherwise. Implemented as Initialize() -> RunOneFrame()
+    // in a loop -> Shutdown(), below -- a driver that needs frame-by-frame
+    // control (a visual-regression test harness stepping frames between
+    // NAVIGATE calls, e.g.) calls those three directly instead of Run(), the
+    // same real window/renderer/OnStart path, just not blocking for the whole
+    // process lifetime.
     int Run();
 
     // Ends the frame loop after the current frame finishes.
     void RequestQuit();
+
+    // Run()'s own three phases, public for a caller that needs to step frames
+    // itself rather than block inside Run() for the application's whole
+    // lifetime (a test harness driving a real window, e.g. -- GetWindow()/
+    // GetRenderer() stay protected; a caller that only needs "construct the
+    // real window and run frames" never needs either directly). Calling
+    // Initialize()/RunOneFrame()/Shutdown() directly and calling Run() are
+    // mutually exclusive for a given instance -- Run() already calls all
+    // three itself.
+
+    // Configure -> window/renderer/font-backend construction -> OnStart.
+    // Returns false on window/renderer construction failure or if OnStart()
+    // itself returned false (OnShutdown()/window teardown already ran in that
+    // case, matching Run()'s own early-return behavior -- do not call
+    // Shutdown() again after a false return).
+    bool Initialize();
+
+    // Runs exactly one iteration of Run()'s own frame body: pump OS events,
+    // track DPI-scale changes, Tick() registered lifecycles, OnUpdate(),
+    // Measure/Arrange/UpdateInteractionState the mounted root widget (if any),
+    // then Draw()/OnRender()/present. Returns false when the OS asked to quit
+    // (the window closed) or RequestQuit() was called during this frame --
+    // the same "keep looping?" signal Run()'s own `while (!QuitRequested)`
+    // re-checks every iteration, just handed back to the caller instead of
+    // driving the loop itself. Undefined if called before a successful
+    // Initialize().
+    bool RunOneFrame();
+
+    // OnShutdown() -> window teardown. Call after Initialize() succeeded and
+    // the caller is done stepping frames (RunOneFrame() returned false, or the
+    // caller decided to stop early) -- mirrors Run()'s own post-loop cleanup.
+    void Shutdown();
 
     // Thin forwards onto an owned Penumbra::LifecycleRegistry (see
     // GetLifecycleRegistry() below) -- same behavior as always, now factored
