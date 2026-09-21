@@ -31,7 +31,13 @@ struct InputState {
     bool  MouseButtonDown[3]{};                        // left, middle, right — current
     bool  MouseButtonPressedThisFrame[3]{};
     bool  MouseButtonReleasedThisFrame[3]{};
-    float MouseWheelDelta{0.0f};                       // accumulated this frame
+    float MouseWheelDelta{0.0f};                       // accumulated this frame (vertical)
+    // Horizontal wheel/trackpad delta, accumulated this frame -- SDL's own Event.wheel.x
+    // (a trackpad's own horizontal swipe on most platforms). Needed by
+    // ScrollablePanel::ScrollDirection::Horizontal (give-code-blocks-their-own-
+    // horizontally-scrollable-non-wrapping-frame-in-the-card-modal, Cairn) -- a
+    // horizontally-scrolling viewport wants this instead of MouseWheelDelta above.
+    float MouseWheelDeltaX{0.0f};
 
     std::string       TextInputThisFrame;              // from SDL text-input events
     std::vector<Key>  KeysPressedThisFrame;            // arrows, backspace, delete, etc.

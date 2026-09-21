@@ -48,7 +48,14 @@ Point ScrollablePanel::Measure(Point AvailableSizeLogical) {
     }
 
     ContentHeight = Total;
+    ContentWidth = MaxWidth;
 
+    if (Direction == ScrollDirection::Horizontal) {
+        // The panel fills the width it is offered (it is the viewport on X now, not
+        // content-sized) and is exactly as tall as its own stacked content -- see this
+        // class's own doc comment for why the axes swap roles in this mode.
+        return {AvailableSizeLogical.X, Total + Frame.Y};
+    }
     // The panel fills the height it is offered (it is a viewport, not content-sized).
     return {MaxWidth + Frame.X, AvailableSizeLogical.Y};
 }
@@ -57,11 +64,21 @@ void ScrollablePanel::Arrange(Rect FinalRectLogical) {
     ArrangedRect = FinalRectLogical;
 
     const Rect Content = ContentRectFrom(FinalRectLogical);
-    const float MaxScroll = NonNegative(ContentHeight - Content.H);
-    ScrollOffsetY = Clamp(ScrollOffsetY, 0.0f, MaxScroll);
+    const bool IsHorizontal = (Direction == ScrollDirection::Horizontal);
+    if (IsHorizontal) {
+        // No vertical scroll at all in this mode -- ContentHeight was sized to exactly
+        // Content.H by Measure above, so this clamps to 0 regardless, but stating it
+        // directly is clearer than relying on that coincidence.
+        ScrollOffsetY = 0.0f;
+        const float MaxScrollX = NonNegative(ContentWidth - Content.W);
+        ScrollOffsetX = Clamp(ScrollOffsetX, 0.0f, MaxScrollX);
+    } else {
+        const float MaxScroll = NonNegative(ContentHeight - Content.H);
+        ScrollOffsetY = Clamp(ScrollOffsetY, 0.0f, MaxScroll);
+    }
 
-    // Lay children out as a vertical column, shifted up by the scroll offset.
-    // Positions may fall outside the viewport; the clip in Draw hides them.
+    // Lay children out as a vertical column, shifted up by the (vertical-mode) scroll
+    // offset. Positions may fall outside the viewport; the clip in Draw hides them.
     float CursorY = Content.Y - ScrollOffsetY;
     const std::size_t Count = Children.size();
     bool  AnyVisible = false;
@@ -80,18 +97,27 @@ void ScrollablePanel::Arrange(Rect FinalRectLogical) {
         const float AvailableCross = NonNegative(Content.W - Margin.Left - Margin.Right);
         float ChildX = Content.X + Margin.Left;
         float ChildWidth = Desired.X;
-        switch (CrossAlignment) {
-        case CrossAlign::Start:
-            break;
-        case CrossAlign::Center:
-            ChildX = Content.X + Margin.Left + (AvailableCross - Desired.X) / 2.0f;
-            break;
-        case CrossAlign::End:
-            ChildX = Content.X + Content.W - Margin.Right - Desired.X;
-            break;
-        case CrossAlign::Stretch:
-            ChildWidth = AvailableCross;
-            break;
+        if (IsHorizontal) {
+            // The cross axis is the scrolled viewport now -- children are positioned
+            // from Start and shifted by the horizontal scroll offset, same shape as
+            // CursorY's own "- ScrollOffsetY" above; CrossAlignment (Center/End/
+            // Stretch) has no sensible meaning once a child is allowed to exceed the
+            // viewport width, so it's not consulted in this mode.
+            ChildX = Content.X + Margin.Left - ScrollOffsetX;
+        } else {
+            switch (CrossAlignment) {
+            case CrossAlign::Start:
+                break;
+            case CrossAlign::Center:
+                ChildX = Content.X + Margin.Left + (AvailableCross - Desired.X) / 2.0f;
+                break;
+            case CrossAlign::End:
+                ChildX = Content.X + Content.W - Margin.Right - Desired.X;
+                break;
+            case CrossAlign::Stretch:
+                ChildWidth = AvailableCross;
+                break;
+            }
         }
 
         if (AnyVisible) {
@@ -135,7 +161,17 @@ bool ScrollablePanel::UpdateInteractionState(const Platform::InputState& Input) 
     // still had room to scroll already used the wheel delta on itself -- don't also
     // apply it here, or hovering it would scroll both it and this panel at once.
     WheelHandledThisFrame = false;
-    if (!ChildConsumedWheel && WheelStepLogical != 0.0f && Input.MouseWheelDelta != 0.0f) {
+    if (Direction == ScrollDirection::Horizontal) {
+        if (!ChildConsumedWheel && HorizontalWheelStepLogical != 0.0f && Input.MouseWheelDeltaX != 0.0f) {
+            const float MaxScrollX = NonNegative(ContentWidth - Content.W);
+            if (MaxScrollX > 0.0f) {
+                ScrollOffsetX =
+                    Clamp(ScrollOffsetX - Input.MouseWheelDeltaX * HorizontalWheelStepLogical, 0.0f, MaxScrollX);
+                Consumed = true;
+                WheelHandledThisFrame = true;
+            }
+        }
+    } else if (!ChildConsumedWheel && WheelStepLogical != 0.0f && Input.MouseWheelDelta != 0.0f) {
         const float MaxScroll = NonNegative(ContentHeight - Content.H);
         if (MaxScroll > 0.0f) {
             ScrollOffsetY = Clamp(ScrollOffsetY - Input.MouseWheelDelta * WheelStepLogical, 0.0f, MaxScroll);

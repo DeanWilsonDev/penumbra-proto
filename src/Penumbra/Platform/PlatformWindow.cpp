@@ -116,6 +116,7 @@ bool PlatformWindow::PumpEventsAndBuildInput(InputState& OutInputState) {
     OutInputState.TextInputThisFrame.clear();
     OutInputState.KeysPressedThisFrame.clear();
     OutInputState.MouseWheelDelta = 0.0f;
+    OutInputState.MouseWheelDeltaX = 0.0f;
 
     bool KeepRunning = true;
 
@@ -127,6 +128,7 @@ bool PlatformWindow::PumpEventsAndBuildInput(InputState& OutInputState) {
             break;
         case SDL_EVENT_MOUSE_WHEEL:
             OutInputState.MouseWheelDelta += Event.wheel.y;
+            OutInputState.MouseWheelDeltaX += Event.wheel.x;
             break;
         case SDL_EVENT_TEXT_INPUT:
             OutInputState.TextInputThisFrame += Event.text.text;
