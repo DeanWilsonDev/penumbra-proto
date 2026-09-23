@@ -83,8 +83,15 @@ private:
         bool                        DismissOnOutsideClick;
     };
 
-    std::unique_ptr<WidgetBase> Root;
+    // Overlays declared before Root so it destructs *after* Root (members
+    // destruct in reverse declaration order): an open Portal's anchor widget
+    // (inside Root) must run its own destructor -- which suppresses its
+    // OverlayDestroyed dismiss notification -- before the OverlayHost's own
+    // Overlays entries destruct and would otherwise fire that notification
+    // against an anchor (and its Nyx-side onDismiss closure) that's already
+    // gone or unsafe to call back into.
     std::vector<Overlay>        Overlays;
+    std::unique_ptr<WidgetBase> Root;
     OverlayId                   NextId{1};
     bool                        DispatchingOverlayInput{false};
     std::vector<OverlayId>      PendingDismissals;
