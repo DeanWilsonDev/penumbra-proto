@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace Penumbra::Widgets {
@@ -40,23 +41,10 @@ public:
     // Arrange (same one-time-setup expectation as SplitPanel::SetFirst/SetSecond).
     WidgetBase* SetRoot(std::unique_ptr<WidgetBase> Content);
 
-    // Stacks Content above Root and every previously-shown overlay, both for draw
-    // order (later = on top) and input priority (later = first refusal). Content
-    // is measured and arranged at PlacementRectLogical directly — it does not go
-    // through Root's layout. DismissOnOutsideClick: a press outside
-    // PlacementRectLogical closes this overlay and consumes the event instead of
-    // falling through to whatever is beneath it — the standard dropdown/menu
-    // convention (set false for e.g. a non-modal tooltip that shouldn't eat
-    // clicks meant for the page).
-    OverlayId ShowOverlay(std::unique_ptr<WidgetBase> Content, Rect PlacementRectLogical,
+    OverlayId ShowOverlay(std::unique_ptr<WidgetBase> Content, std::optional<Rect> PlacementRectLogical,
                          bool DismissOnOutsideClick = true);
 
-    // Updates a shown overlay's placement rect in place (e.g. a width-open tween
-    // recomputing the panel rect every frame) without disturbing its Content or
-    // its position in the stacking order. Takes effect on the next Arrange — the
-    // new rect isn't measured/arranged immediately, matching every other Arrange-
-    // driven rect in the tree. No-op if Id doesn't name a currently-shown overlay.
-    void SetOverlayPlacement(OverlayId Id, Rect PlacementRectLogical);
+    void SetOverlayPlacement(OverlayId Id, std::optional<Rect> PlacementRectLogical);
 
     // No-op if Id doesn't name a currently-shown overlay (already dismissed, or
     // never existed) — callers don't need to track whether they already closed it.
@@ -79,9 +67,11 @@ private:
     struct Overlay {
         OverlayId                   Id;
         std::unique_ptr<WidgetBase> Content;
-        Rect                        PlacementRectLogical;
+        std::optional<Rect>         PlacementRectLogical;
         bool                        DismissOnOutsideClick;
     };
+
+    Rect PlacementOf(const Overlay& Entry) const { return Entry.PlacementRectLogical.value_or(ArrangedRect); }
 
     // Overlays declared before Root so it destructs *after* Root (members
     // destruct in reverse declaration order): an open Portal's anchor widget

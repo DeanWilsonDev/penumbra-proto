@@ -36,6 +36,7 @@ add_library(penumbra STATIC
     src/Penumbra/Widgets/Button.cpp
     src/Penumbra/Widgets/ScrollablePanel.cpp
     src/Penumbra/Widgets/Label.cpp
+    src/Penumbra/Widgets/Length.cpp
     src/Penumbra/Widgets/Checkbox.cpp
     src/Penumbra/Widgets/Chevron.cpp
     src/Penumbra/Widgets/Dropdown.cpp

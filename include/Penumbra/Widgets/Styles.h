@@ -2,6 +2,7 @@
 
 #include "Penumbra/Geometry.h"
 #include "Penumbra/Render/Color.h"
+#include "Penumbra/Widgets/Length.h"
 
 namespace Penumbra::Widgets {
 
@@ -98,9 +99,11 @@ struct BoxStyle {
     // state-specific transforms is a consumer concern.
     Penumbra::Transform Transform{};
 
-    float WidthLogical{-1.0f};
-    float HeightLogical{-1.0f};
-    float FlexGrow{0.0f};
+    Length Width;
+    Length Height;
+    Length MinWidth;
+    Length MaxWidth;
+    float  FlexGrow{0.0f};
 };
 
 // Per-widget styles extend BoxStyle so the box-model slots stay universal and free.

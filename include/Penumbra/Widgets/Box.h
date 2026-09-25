@@ -89,10 +89,10 @@ protected:
     virtual Point MeasureContent(Point AvailableContentSize) { return {0.0f, 0.0f}; }
     virtual void  DrawContent(Render::Renderer&, Rect ContentRect) {}
 
-    // The box-model overhead (border + padding) on each axis, and the content rect
-    // an outer rect collapses to once border and padding are removed.
     Point FrameSize() const;
     Rect  ContentRectFrom(Rect OuterRect) const;
+    Point ConstrainAvailable(Point AvailableSizeLogical) const;
+    Point ConstrainDesired(Point DesiredSizeLogical, Point AvailableSizeLogical) const;
 
 private:
     // The background Draw should use for CurrentState -- Style.ColorBackgroundHovered/

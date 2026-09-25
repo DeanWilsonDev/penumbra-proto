@@ -22,13 +22,7 @@ bool PointInRect(Point Point, Rect Rect) {
 
 Point ScrollablePanel::Measure(Point AvailableSizeLogical) {
     const Point Frame = FrameSize();
-    Point Viewport = AvailableSizeLogical;
-    if (Style.WidthLogical >= 0.0f) {
-        Viewport.X = Style.WidthLogical;
-    }
-    if (Style.HeightLogical >= 0.0f) {
-        Viewport.Y = Style.HeightLogical;
-    }
+    const Point Viewport = ConstrainAvailable(AvailableSizeLogical);
     const Point ContentAvailable{NonNegative(Viewport.X - Frame.X), NonNegative(Viewport.Y - Frame.Y)};
 
     float Total = 0.0f;
@@ -56,9 +50,9 @@ Point ScrollablePanel::Measure(Point AvailableSizeLogical) {
     ContentWidth = MaxWidth;
 
     if (Direction == ScrollDirection::Horizontal) {
-        return {Viewport.X, Style.HeightLogical >= 0.0f ? Style.HeightLogical : Total + Frame.Y};
+        return ConstrainDesired({Viewport.X, Total + Frame.Y}, AvailableSizeLogical);
     }
-    return {Style.WidthLogical >= 0.0f ? Style.WidthLogical : MaxWidth + Frame.X, Viewport.Y};
+    return ConstrainDesired({MaxWidth + Frame.X, Viewport.Y}, AvailableSizeLogical);
 }
 
 void ScrollablePanel::Arrange(Rect FinalRectLogical) {

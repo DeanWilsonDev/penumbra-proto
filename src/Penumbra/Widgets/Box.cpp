@@ -83,6 +83,21 @@ float GrowExtentAt(const std::vector<float>& Extents, std::size_t Index) {
     return Extents.empty() ? -1.0f : Extents[Index];
 }
 
+float ConstrainWidth(const BoxStyle& Style, float Width, float AvailableWidth) {
+    float Result = Style.Width.IsSet() ? Style.Width.Resolve(AvailableWidth) : Width;
+    if (Style.MaxWidth.IsSet()) {
+        Result = std::min(Result, Style.MaxWidth.Resolve(AvailableWidth));
+    }
+    if (Style.MinWidth.IsSet()) {
+        Result = std::max(Result, Style.MinWidth.Resolve(AvailableWidth));
+    }
+    return Result;
+}
+
+float ConstrainHeight(const BoxStyle& Style, float Height, float AvailableHeight) {
+    return Style.Height.IsSet() ? Style.Height.Resolve(AvailableHeight) : Height;
+}
+
 Point StackChildAvailable(Point ContentSize, EdgeInsets Margin, bool Vertical, float GrowExtent) {
     Point Available{NonNegative(ContentSize.X - Margin.Left - Margin.Right),
                     NonNegative(ContentSize.Y - Margin.Top - Margin.Bottom)};
@@ -159,17 +174,7 @@ Rect Box::ContentRectFrom(Rect OuterRect) const {
 Point Box::Measure(Point AvailableSizeLogical) {
     const Point Frame = FrameSize();
 
-    // Style.WidthLogical/HeightLogical (>= 0) override the border-box size this Box
-    // measures against and reports upward -- a fixed-width container constrains its
-    // own children to its own width, not whatever the parent happened to offer,
-    // matching CSS. -1 ("auto", the default) leaves AvailableSizeLogical untouched.
-    Point EffectiveAvailable = AvailableSizeLogical;
-    if (Style.WidthLogical >= 0.0f) {
-        EffectiveAvailable.X = Style.WidthLogical;
-    }
-    if (Style.HeightLogical >= 0.0f) {
-        EffectiveAvailable.Y = Style.HeightLogical;
-    }
+    const Point EffectiveAvailable = ConstrainAvailable(AvailableSizeLogical);
 
     const Point ContentAvailable{NonNegative(EffectiveAvailable.X - Frame.X),
                                  NonNegative(EffectiveAvailable.Y - Frame.Y)};
@@ -179,16 +184,6 @@ Point Box::Measure(Point AvailableSizeLogical) {
     if (Layout == LayoutMode::None) {
         ContentDesired = MeasureContent(ContentAvailable);
     } else if (Layout == LayoutMode::FixedLeadingStack) {
-        // Greedy, like the FixedLeadingStrip composite this generalizes
-        // (Measure() there just returns AvailableSizeLogical unchanged): this Box
-        // reports back the full ContentAvailable rather than the sum of its
-        // children's sizes, since Leading/Fill's own extents are dictated by
-        // LeadingExtentLogical/the remainder, not by what they'd naturally
-        // measure. Each child's own Measure() is still called (children[0] with
-        // exactly LeadingExtentLogical, every child after it with whatever's left
-        // once Leading + ChildGap are subtracted) so nested widgets update
-        // whatever they cache there -- the *returned* Point plays no part in this
-        // Box's own Desired, only in Arrange's cross-axis placement below.
         const float LeadingExtent = NonNegative(LeadingExtentLogical);
         const float FillHeight    = NonNegative(ContentAvailable.Y - LeadingExtent - ChildGap);
 
@@ -240,14 +235,17 @@ Point Box::Measure(Point AvailableSizeLogical) {
         ContentDesired = Vertical ? Point{CrossMax, MainTotal} : Point{MainTotal, CrossMax};
     }
 
-    Point Desired{ContentDesired.X + Frame.X, ContentDesired.Y + Frame.Y};
-    if (Style.WidthLogical >= 0.0f) {
-        Desired.X = Style.WidthLogical;
-    }
-    if (Style.HeightLogical >= 0.0f) {
-        Desired.Y = Style.HeightLogical;
-    }
-    return Desired;
+    return ConstrainDesired({ContentDesired.X + Frame.X, ContentDesired.Y + Frame.Y}, AvailableSizeLogical);
+}
+
+Point Box::ConstrainAvailable(Point AvailableSizeLogical) const {
+    return {ConstrainWidth(Style, AvailableSizeLogical.X, AvailableSizeLogical.X),
+            ConstrainHeight(Style, AvailableSizeLogical.Y, AvailableSizeLogical.Y)};
+}
+
+Point Box::ConstrainDesired(Point DesiredSizeLogical, Point AvailableSizeLogical) const {
+    return {ConstrainWidth(Style, DesiredSizeLogical.X, AvailableSizeLogical.X),
+            ConstrainHeight(Style, DesiredSizeLogical.Y, AvailableSizeLogical.Y)};
 }
 
 void Box::Arrange(Rect FinalRectLogical) {

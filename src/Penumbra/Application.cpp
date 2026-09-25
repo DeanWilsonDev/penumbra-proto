@@ -1,4 +1,5 @@
 #include "Penumbra/Application.h"
+#include "Penumbra/Widgets/Length.h"
 
 #include <algorithm>
 #include <utility>
@@ -52,14 +53,10 @@ bool Application::RunOneFrame() {
         OnUpdate(Input.DeltaTimeSeconds);
     }
 
-    // The Measure/Arrange/UpdateInteractionState pass a hand-rolled frame loop
-    // (e.g. pharos-proto's own updateWidgetTree()) would otherwise have to drive
-    // itself -- runs automatically once a root is mounted via SetRootWidget(),
-    // sized against the live window rather than a compile-time guess, same as
-    // that hand-rolled call site does via GetWindowLogicalSize().
     if (RootWidget) {
         const Point WindowSize = Window.GetLogicalWindowSize();
         const Rect  WindowRect{0.0f, 0.0f, WindowSize.X, WindowSize.Y};
+        Widgets::SetLayoutViewportLogical(WindowSize);
         RootWidget->Measure(WindowSize);
         RootWidget->Arrange(WindowRect);
         RootWidgetConsumedInputThisFrame = RootWidget->UpdateInteractionState(Input);

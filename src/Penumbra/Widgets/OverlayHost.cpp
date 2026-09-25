@@ -17,14 +17,14 @@ WidgetBase* OverlayHost::SetRoot(std::unique_ptr<WidgetBase> Content) {
     return Root.get();
 }
 
-OverlayId OverlayHost::ShowOverlay(std::unique_ptr<WidgetBase> Content, Rect PlacementRectLogical,
+OverlayId OverlayHost::ShowOverlay(std::unique_ptr<WidgetBase> Content, std::optional<Rect> PlacementRectLogical,
                                    bool DismissOnOutsideClick) {
     const OverlayId Id = NextId++;
     Overlays.push_back({Id, std::move(Content), PlacementRectLogical, DismissOnOutsideClick});
     return Id;
 }
 
-void OverlayHost::SetOverlayPlacement(OverlayId Id, Rect PlacementRectLogical) {
+void OverlayHost::SetOverlayPlacement(OverlayId Id, std::optional<Rect> PlacementRectLogical) {
     for (Overlay& Entry : Overlays) {
         if (Entry.Id == Id) {
             Entry.PlacementRectLogical = PlacementRectLogical;
@@ -59,8 +59,9 @@ void OverlayHost::Arrange(Rect FinalRectLogical) {
         Root->Arrange(FinalRectLogical);
     }
     for (Overlay& Entry : Overlays) {
-        Entry.Content->Measure({Entry.PlacementRectLogical.W, Entry.PlacementRectLogical.H});
-        Entry.Content->Arrange(Entry.PlacementRectLogical);
+        const Rect Placement = PlacementOf(Entry);
+        Entry.Content->Measure({Placement.W, Placement.H});
+        Entry.Content->Arrange(Placement);
     }
 }
 
@@ -74,7 +75,7 @@ bool OverlayHost::UpdateInteractionState(const Platform::InputState& Input) {
     // convention practically every menu/dropdown implementation uses.
     Overlay& Top = Overlays.back();
     const OverlayId TopId = Top.Id;
-    const Rect TopPlacement = Top.PlacementRectLogical;
+    const Rect TopPlacement = PlacementOf(Top);
     const bool TopDismissesOutside = Top.DismissOnOutsideClick;
 
     for (Platform::Key PressedKey : Input.KeysPressedThisFrame) {

@@ -44,7 +44,7 @@ public:
     bool AlwaysHighlighted{false};
 
 protected:
-    Point MeasureContent(Point) override { return {0.0f, Style.HeightLogical}; }
+    Point MeasureContent(Point) override { return {0.0f, Style.Height.Value}; }
 
     void DrawContent(Render::Renderer& Renderer, Rect ContentRect) override {
         const bool Highlighted = AlwaysHighlighted || GetInteractionState() != InteractionState::Default;
@@ -166,7 +166,7 @@ void Dropdown::Open() {
         Row->VisualGap = DropdownVisualStyle.LeadingVisualGapLogical;
         Row->AlwaysHighlighted = Selected;
         Row->Style = Selected ? DropdownVisualStyle.SelectedRow : DropdownVisualStyle.Row;
-        Row->Style.HeightLogical = DropdownVisualStyle.RowHeightLogical;
+        Row->Style.Height = Length::Logical(DropdownVisualStyle.RowHeightLogical);
         const std::shared_ptr<DropdownState> SharedState = State;
         Row->OnReleased = [this, SharedState, Index]() {
             if (Index != SelectedIndex) {
