@@ -22,8 +22,14 @@ bool PointInRect(Point Point, Rect Rect) {
 
 Point ScrollablePanel::Measure(Point AvailableSizeLogical) {
     const Point Frame = FrameSize();
-    const Point ContentAvailable{NonNegative(AvailableSizeLogical.X - Frame.X),
-                                 NonNegative(AvailableSizeLogical.Y - Frame.Y)};
+    Point Viewport = AvailableSizeLogical;
+    if (Style.WidthLogical >= 0.0f) {
+        Viewport.X = Style.WidthLogical;
+    }
+    if (Style.HeightLogical >= 0.0f) {
+        Viewport.Y = Style.HeightLogical;
+    }
+    const Point ContentAvailable{NonNegative(Viewport.X - Frame.X), NonNegative(Viewport.Y - Frame.Y)};
 
     float Total = 0.0f;
     float MaxWidth = 0.0f;
@@ -31,8 +37,7 @@ Point ScrollablePanel::Measure(Point AvailableSizeLogical) {
     for (std::size_t Index = 0; Index < Children.size(); ++Index) {
         WidgetBase* Child = Children[Index].get();
         if (!Child->GetIsVisible()) {
-            continue; // absent, not zero-sized-but-present: no gap counted either -- same
-                      // contract Box::MeasureChildren already gives its own children.
+            continue;
         }
         const EdgeInsets Margin = Child->GetMarginLogical();
         const Point ChildAvailable{NonNegative(ContentAvailable.X - Margin.Left - Margin.Right),
@@ -51,13 +56,9 @@ Point ScrollablePanel::Measure(Point AvailableSizeLogical) {
     ContentWidth = MaxWidth;
 
     if (Direction == ScrollDirection::Horizontal) {
-        // The panel fills the width it is offered (it is the viewport on X now, not
-        // content-sized) and is exactly as tall as its own stacked content -- see this
-        // class's own doc comment for why the axes swap roles in this mode.
-        return {AvailableSizeLogical.X, Total + Frame.Y};
+        return {Viewport.X, Style.HeightLogical >= 0.0f ? Style.HeightLogical : Total + Frame.Y};
     }
-    // The panel fills the height it is offered (it is a viewport, not content-sized).
-    return {MaxWidth + Frame.X, AvailableSizeLogical.Y};
+    return {Style.WidthLogical >= 0.0f ? Style.WidthLogical : MaxWidth + Frame.X, Viewport.Y};
 }
 
 void ScrollablePanel::Arrange(Rect FinalRectLogical) {
@@ -134,20 +135,18 @@ void ScrollablePanel::Arrange(Rect FinalRectLogical) {
 
 bool ScrollablePanel::UpdateInteractionState(const Platform::InputState& Input) {
     const bool OverPanel = PointInRect(Input.MousePosition, ArrangedRect);
+    PointerOver = OverPanel;
     if (!OverPanel) {
         return false;
     }
 
-    // Children's hit region is restricted to the clipped content rect, so widgets
-    // scrolled out of view cannot be interacted with.
     const Rect Content = ContentRectFrom(ArrangedRect);
     bool Consumed = false;
     bool ChildConsumedWheel = false;
     if (PointInRect(Input.MousePosition, Content)) {
         for (auto Iterator = Children.rbegin(); Iterator != Children.rend(); ++Iterator) {
             if (!(*Iterator)->GetIsVisible()) {
-                continue; // a hidden subtree can't consume input -- same contract
-                          // Box::UpdateInteractionState already gives its own children.
+                continue;
             }
             if ((*Iterator)->UpdateInteractionState(Input)) {
                 Consumed = true;
@@ -196,11 +195,51 @@ void ScrollablePanel::Draw(Render::Renderer& Renderer) {
     Renderer.PushClipRect(Content);
     for (auto& Child : Children) {
         if (!Child->GetIsVisible()) {
-            continue; // same contract Box::Draw already gives its own children.
+            continue;
         }
         Child->Draw(Renderer);
     }
     Renderer.PopClipRect();
+
+    DrawScrollbar(Renderer, Content);
+}
+
+void ScrollablePanel::DrawScrollbar(Render::Renderer& Renderer, Rect Content) const {
+    if (ScrollbarWidthLogical <= 0.0f) {
+        return;
+    }
+
+    const bool  IsHorizontal = (Direction == ScrollDirection::Horizontal);
+    const float Viewport     = IsHorizontal ? Content.W : Content.H;
+    const float Extent       = IsHorizontal ? ContentWidth : ContentHeight;
+    if (Viewport <= 0.0f || Extent <= Viewport) {
+        return;
+    }
+
+    const float Thickness = ScrollbarWidthLogical;
+    const Rect  Track = IsHorizontal
+        ? Rect{Content.X, ArrangedRect.Y + ArrangedRect.H - Style.BorderWidth - Thickness, Content.W, Thickness}
+        : Rect{ArrangedRect.X + ArrangedRect.W - Style.BorderWidth - Thickness, Content.Y, Thickness, Content.H};
+    const float Radius = Thickness / 2.0f;
+
+    if (ColorScrollbarTrack.A != 0) {
+        Renderer.DrawFilledRect(Track, ColorScrollbarTrack, Radius);
+    }
+
+    const Render::Color Thumb =
+        PointerOver && ColorScrollbarThumbHovered.A != 0 ? ColorScrollbarThumbHovered : ColorScrollbarThumb;
+    if (Thumb.A == 0) {
+        return;
+    }
+
+    const float TrackLength = IsHorizontal ? Track.W : Track.H;
+    const float ThumbLength = std::min(TrackLength, std::max(Thickness, TrackLength * Viewport / Extent));
+    const float Offset      = IsHorizontal ? ScrollOffsetX : ScrollOffsetY;
+    const float ThumbStart  = (Offset / (Extent - Viewport)) * (TrackLength - ThumbLength);
+
+    const Rect ThumbRect = IsHorizontal ? Rect{Track.X + ThumbStart, Track.Y, ThumbLength, Thickness}
+                                        : Rect{Track.X, Track.Y + ThumbStart, Thickness, ThumbLength};
+    Renderer.DrawFilledRect(ThumbRect, Thumb, Radius);
 }
 
 } // namespace Penumbra::Widgets

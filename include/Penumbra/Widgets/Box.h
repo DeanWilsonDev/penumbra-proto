@@ -56,6 +56,7 @@ public:
     void  Draw(Render::Renderer&) override;
 
     EdgeInsets GetMarginLogical() const override { return Style.Margin; }
+    float      GetFlexGrow() const override { return Style.FlexGrow; }
 
     InteractionState GetInteractionState() const { return CurrentState; }
 

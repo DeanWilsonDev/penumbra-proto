@@ -43,10 +43,8 @@ public:
 
     virtual void Draw(Render::Renderer&) = 0;
 
-    // A child's margin is consumed by its parent during Arrange. Margin lives on
-    // BoxStyle, but the parent reaches it polymorphically because every widget is a
-    // Box; non-Box widgets (there are none in this PoC) report zero.
     virtual EdgeInsets GetMarginLogical() const { return {0.0f, 0.0f, 0.0f, 0.0f}; }
+    virtual float      GetFlexGrow() const { return 0.0f; }
 
     // A read-only, uniform way to walk a widget's children regardless of how it
     // stores them internally (a generic vector, named slots, ...). Widgets with no

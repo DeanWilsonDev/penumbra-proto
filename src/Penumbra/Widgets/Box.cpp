@@ -36,6 +36,61 @@ Point InverseTransformPoint(Point ScreenPoint, Point Pivot, const Transform& T) 
 
     return {Pivot.X + RotatedX / ScaleX, Pivot.Y + RotatedY / ScaleY};
 }
+
+std::vector<float> GrowExtentsFor(const std::vector<std::unique_ptr<WidgetBase>>& Children, bool Vertical,
+                                  Point ContentSize, float ChildGap) {
+    float TotalGrow = 0.0f;
+    for (const auto& Child : Children) {
+        if (Child->GetIsVisible() && Child->GetFlexGrow() > 0.0f) {
+            TotalGrow += Child->GetFlexGrow();
+        }
+    }
+    if (TotalGrow <= 0.0f) {
+        return {};
+    }
+
+    float       FixedMain    = 0.0f;
+    std::size_t VisibleCount = 0;
+    for (const auto& Child : Children) {
+        if (!Child->GetIsVisible()) {
+            continue;
+        }
+        ++VisibleCount;
+        const EdgeInsets Margin = Child->GetMarginLogical();
+        FixedMain += Vertical ? Margin.Top + Margin.Bottom : Margin.Left + Margin.Right;
+        if (Child->GetFlexGrow() > 0.0f) {
+            continue;
+        }
+        const Point Desired = Child->Measure({NonNegative(ContentSize.X - Margin.Left - Margin.Right),
+                                              NonNegative(ContentSize.Y - Margin.Top - Margin.Bottom)});
+        FixedMain += Vertical ? Desired.Y : Desired.X;
+    }
+
+    const float Gaps      = VisibleCount > 1 ? static_cast<float>(VisibleCount - 1) * ChildGap : 0.0f;
+    const float Remaining = NonNegative((Vertical ? ContentSize.Y : ContentSize.X) - FixedMain - Gaps);
+
+    std::vector<float> Extents(Children.size(), -1.0f);
+    for (std::size_t Index = 0; Index < Children.size(); ++Index) {
+        const WidgetBase* Child = Children[Index].get();
+        if (Child->GetIsVisible() && Child->GetFlexGrow() > 0.0f) {
+            Extents[Index] = Remaining * Child->GetFlexGrow() / TotalGrow;
+        }
+    }
+    return Extents;
+}
+
+float GrowExtentAt(const std::vector<float>& Extents, std::size_t Index) {
+    return Extents.empty() ? -1.0f : Extents[Index];
+}
+
+Point StackChildAvailable(Point ContentSize, EdgeInsets Margin, bool Vertical, float GrowExtent) {
+    Point Available{NonNegative(ContentSize.X - Margin.Left - Margin.Right),
+                    NonNegative(ContentSize.Y - Margin.Top - Margin.Bottom)};
+    if (GrowExtent >= 0.0f) {
+        (Vertical ? Available.Y : Available.X) = GrowExtent;
+    }
+    return Available;
+}
 } // namespace
 
 WidgetBase* Box::AddChild(std::unique_ptr<WidgetBase> Child) {
@@ -157,17 +212,17 @@ Point Box::Measure(Point AvailableSizeLogical) {
         float MainTotal = 0.0f;
         float CrossMax  = 0.0f;
         bool  AnyVisible = false;
+        const std::vector<float> GrowExtents = GrowExtentsFor(Children, Vertical, ContentAvailable, ChildGap);
 
         for (std::size_t Index = 0; Index < Children.size(); ++Index) {
             WidgetBase* Child = Children[Index].get();
             if (!Child->GetIsVisible()) {
-                continue; // absent, not zero-sized-but-present: no gap counted either
+                continue;
             }
             const EdgeInsets Margin = Child->GetMarginLogical();
 
-            const Point ChildAvailable{NonNegative(ContentAvailable.X - Margin.Left - Margin.Right),
-                                       NonNegative(ContentAvailable.Y - Margin.Top - Margin.Bottom)};
-            const Point Desired = Child->Measure(ChildAvailable);
+            const Point Desired = Child->Measure(
+                StackChildAvailable(ContentAvailable, Margin, Vertical, GrowExtentAt(GrowExtents, Index)));
 
             const float ChildMain   = Vertical ? Desired.Y : Desired.X;
             const float ChildCross  = Vertical ? Desired.X : Desired.Y;
@@ -258,16 +313,12 @@ void Box::Arrange(Rect FinalRectLogical) {
 
     const bool Vertical = (Layout == LayoutMode::VerticalStack);
     const std::size_t Count = Children.size();
+    const Point ContentSize{Content.W, Content.H};
+    const std::vector<float> GrowExtents = GrowExtentsFor(Children, Vertical, ContentSize, ChildGap);
 
-    // JustifyContentMode distribution needs the total main-axis extent every visible
-    // child will occupy *before* any of them is placed (Center centers the whole group;
-    // End anchors it to the far edge; SpaceBetween spreads the leftover room evenly
-    // between siblings) -- Start (the overwhelmingly common case, and every Box's
-    // behavior before this field existed) needs none of that, so it skips this pass
-    // entirely and falls straight into the unchanged sequential-packing loop below.
     float StartOffset   = 0.0f;
     float ExtraGapPerGap = 0.0f;
-    if (JustifyContentMode != Justify::Start) {
+    if (JustifyContentMode != Justify::Start && GrowExtents.empty()) {
         float       TotalChildrenMain = 0.0f;
         std::size_t VisibleCount      = 0;
         for (std::size_t Index = 0; Index < Count; ++Index) {
@@ -310,13 +361,12 @@ void Box::Arrange(Rect FinalRectLogical) {
     for (std::size_t Index = 0; Index < Count; ++Index) {
         WidgetBase* Child = Children[Index].get();
         if (!Child->GetIsVisible()) {
-            continue; // not arranged: an un-arranged widget keeps its last ArrangedRect
+            continue;
         }
         const EdgeInsets Margin = Child->GetMarginLogical();
 
-        const Point ChildAvailable{NonNegative(Content.W - Margin.Left - Margin.Right),
-                                   NonNegative(Content.H - Margin.Top - Margin.Bottom)};
-        const Point Desired = Child->Measure(ChildAvailable);
+        const float GrowExtent = GrowExtentAt(GrowExtents, Index);
+        const Point Desired = Child->Measure(StackChildAvailable(ContentSize, Margin, Vertical, GrowExtent));
 
         if (AnyVisible) {
             Cursor += ChildGap + ExtraGapPerGap;
@@ -326,14 +376,16 @@ void Box::Arrange(Rect FinalRectLogical) {
             auto [CrossPos, CrossExtent] =
                 PlaceCross(Content.X, Content.W, Desired.X, Margin.Left, Margin.Right);
             const float Top = Cursor + Margin.Top;
-            Child->Arrange({CrossPos, Top, CrossExtent, Desired.Y});
-            Cursor = Top + Desired.Y + Margin.Bottom;
+            const float Height = GrowExtent >= 0.0f ? GrowExtent : Desired.Y;
+            Child->Arrange({CrossPos, Top, CrossExtent, Height});
+            Cursor = Top + Height + Margin.Bottom;
         } else {
             auto [CrossPos, CrossExtent] =
                 PlaceCross(Content.Y, Content.H, Desired.Y, Margin.Top, Margin.Bottom);
             const float Left = Cursor + Margin.Left;
-            Child->Arrange({Left, CrossPos, Desired.X, CrossExtent});
-            Cursor = Left + Desired.X + Margin.Right;
+            const float Width = GrowExtent >= 0.0f ? GrowExtent : Desired.X;
+            Child->Arrange({Left, CrossPos, Width, CrossExtent});
+            Cursor = Left + Width + Margin.Right;
         }
 
         AnyVisible = true;
