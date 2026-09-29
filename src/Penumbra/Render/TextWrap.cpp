@@ -10,7 +10,6 @@ std::vector<TextLine> WrapText(IFontBackend* FontBackend, FontHandle Font, const
     const std::size_t N = Text.size();
 
     if (!FontBackend || WrapWidthLogical <= 0.0f) {
-        // No font or no room to measure against: fall back to hard-newline-only lines.
         std::size_t LineStart = 0;
         for (std::size_t Index = 0; Index <= N; ++Index) {
             if (Index == N || Text[Index] == '\n') {
@@ -19,36 +18,52 @@ std::vector<TextLine> WrapText(IFontBackend* FontBackend, FontHandle Font, const
             }
         }
     } else {
+        const std::string_view View(Text);
         std::size_t LineStart = 0;
-        std::size_t Cursor = 0;
-        while (Cursor <= N) {
-            if (Cursor == N || Text[Cursor] == '\n') {
-                Lines.push_back({LineStart, Cursor});
-                if (Cursor == N) {
+        const auto Overflows = [&](std::size_t Cursor) {
+            return FontBackend->MeasureTextWidth(Font, View.substr(LineStart, Cursor + 1 - LineStart)) >
+                   WrapWidthLogical;
+        };
+
+        while (true) {
+            const std::size_t NewlineAt  = Text.find('\n', LineStart);
+            const std::size_t SegmentEnd = NewlineAt == std::string::npos ? N : NewlineAt;
+
+            while (true) {
+                std::size_t Fits = LineStart;
+                std::size_t Over = std::string::npos;
+                for (std::size_t Probe = LineStart + 1; Probe < SegmentEnd;) {
+                    const std::size_t NextSpace = Text.find(' ', Probe);
+                    const std::size_t Candidate = NextSpace < SegmentEnd ? NextSpace : SegmentEnd - 1;
+                    if (Overflows(Candidate)) {
+                        Over = Candidate;
+                        break;
+                    }
+                    Fits  = Candidate;
+                    Probe = Candidate + 1;
+                }
+                if (Over == std::string::npos) {
                     break;
                 }
-                LineStart = Cursor + 1;
-                Cursor = LineStart;
-                continue;
-            }
 
-            const float Width = FontBackend->MeasureTextWidth(
-                Font, std::string_view(Text).substr(LineStart, Cursor + 1 - LineStart));
-            if (Width > WrapWidthLogical && Cursor > LineStart) {
-                const std::size_t SpaceAt = Text.rfind(' ', Cursor - 1);
-                if (SpaceAt != std::string::npos && SpaceAt >= LineStart) {
-                    // Word wrap: drop the space the break lands on.
-                    Lines.push_back({LineStart, SpaceAt});
-                    LineStart = SpaceAt + 1;
+                if (Fits > LineStart || Text[LineStart] == ' ') {
+                    Lines.push_back({LineStart, Fits});
+                    LineStart = Fits + 1;
                 } else {
-                    // A single word is wider than the field: hard character break.
+                    std::size_t Cursor = LineStart + 1;
+                    while (Cursor < Over && !Overflows(Cursor)) {
+                        ++Cursor;
+                    }
                     Lines.push_back({LineStart, Cursor});
                     LineStart = Cursor;
                 }
-                Cursor = LineStart;
-                continue;
             }
-            ++Cursor;
+
+            Lines.push_back({LineStart, SegmentEnd});
+            if (SegmentEnd == N) {
+                break;
+            }
+            LineStart = SegmentEnd + 1;
         }
     }
 

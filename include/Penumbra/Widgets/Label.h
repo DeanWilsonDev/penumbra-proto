@@ -70,7 +70,15 @@ protected:
     void  DrawContent(Render::Renderer&, Rect ContentRect) override;
 
 private:
-    float LineHeight() const; // same "Ag" ascent/descent probe TextArea::LineHeight uses
+    float LineHeight() const;
+    const std::vector<Render::TextLine>& WrappedLinesFor(float WidthLogical);
+
+    std::vector<Render::TextLine> WrapLines;
+    float                         WrapLineHeight{0.0f};
+    float                         WrapWidth{-1.0f};
+    Render::IFontBackend*         WrapFontBackend{nullptr};
+    Render::FontHandle            WrapFont{0};
+    std::string                   WrappedText;
 };
 
 } // namespace Penumbra::Widgets
