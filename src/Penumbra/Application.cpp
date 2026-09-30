@@ -38,6 +38,9 @@ bool Application::RunOneFrame() {
     if (!Window.PumpEventsAndBuildInput(Input)) {
         return false;
     }
+    if (InputFilterFn) {
+        InputFilterFn(Input);
+    }
 
     const float CurrentDpiScaleFactor = Window.GetDpiScaleFactor();
     Renderer.SetDpiScaleFactor(CurrentDpiScaleFactor);
@@ -65,8 +68,6 @@ bool Application::RunOneFrame() {
     }
 
     Renderer.BeginFrame(Config.ClearColor);
-    // Drawn before OnRender/the render hook so any extra host-side drawing (e.g.
-    // a debug overlay) layers on top of the mounted tree rather than under it.
     if (RootWidget) {
         RootWidget->Draw(Renderer);
     }
@@ -113,6 +114,10 @@ void Application::SetOnUpdateHook(UpdateHook Hook) {
 
 bool Application::HasUpdateHook() const {
     return static_cast<bool>(OnUpdateHookFn);
+}
+
+void Application::SetInputFilter(InputFilter Filter) {
+    InputFilterFn = std::move(Filter);
 }
 
 void Application::RegisterLifecycle(IWidgetLifecycle* Lifecycle) {

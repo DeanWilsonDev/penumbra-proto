@@ -140,15 +140,12 @@ public:
     void                     SetOnRenderHook(RenderHook Hook);
     [[nodiscard]] bool       HasRenderHook() const;
 
-    // Host-supplied alternative to overriding OnUpdate(). Takes priority over the
-    // virtual OnUpdate() when set (Run()'s frame loop checks HasUpdateHook()
-    // first), and -- unlike OnUpdate() -- is handed this frame's InputState, which
-    // is otherwise unreachable outside Application's own member functions
-    // (GetInput() is protected). This lets an external host drive interaction
-    // state on a mounted widget tree without subclass access.
     using UpdateHook = std::function<void(float, const Platform::InputState&)>;
     void                     SetOnUpdateHook(UpdateHook Hook);
     [[nodiscard]] bool       HasUpdateHook() const;
+
+    using InputFilter = std::function<void(Platform::InputState&)>;
+    void SetInputFilter(InputFilter Filter);
 
     // Public so an external tree builder can measure text and load fonts before
     // mounting a widget tree.
@@ -234,6 +231,7 @@ private:
     bool                      QuitRequested{false};
     RenderHook                OnRenderHookFn;
     UpdateHook                OnUpdateHookFn;
+    InputFilter               InputFilterFn;
 
     LifecycleRegistry Lifecycles;
 
