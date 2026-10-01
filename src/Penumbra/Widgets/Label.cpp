@@ -1,5 +1,6 @@
 #include "Penumbra/Widgets/Label.h"
 
+#include <algorithm>
 #include <string_view>
 #include <utility>
 
@@ -11,7 +12,8 @@ float Label::LineHeight() const {
 
 const std::vector<Render::TextLine>& Label::WrappedLinesFor(float WidthLogical) {
     if (WrapWidth != WidthLogical || WrapFontBackend != FontBackend || WrapFont != Font || WrappedText != Text) {
-        WrapLines       = Render::WrapText(FontBackend, Font, Text, WidthLogical);
+        const float Tolerance = WidthLogical > 0.0f ? 0.01f : 0.0f;
+        WrapLines       = Render::WrapText(FontBackend, Font, Text, WidthLogical + Tolerance);
         WrapLineHeight  = LineHeight();
         WrapWidth       = WidthLogical;
         WrapFontBackend = FontBackend;
@@ -28,23 +30,18 @@ Point Label::MeasureContent(Point AvailableContentSize) {
 
     if (Wrap) {
         const std::vector<Render::TextLine>& WrappedLines = WrappedLinesFor(AvailableContentSize.X);
-        float ReportedWidth = AvailableContentSize.X;
-        if (ReportedWidth <= 0.0f) {
-            for (const Render::TextLine& L : WrappedLines) {
-                ReportedWidth = std::max(
-                    ReportedWidth,
-                    FontBackend->MeasureTextWidth(Font, std::string_view(Text).substr(L.ContentStart, L.ContentEnd - L.ContentStart)));
-            }
+        const std::string_view               View(Text);
+        float                                Widest = 0.0f;
+        for (const Render::TextLine& L : WrappedLines) {
+            const std::size_t End = (L.ContentEnd < View.size() && View[L.ContentEnd] == ' ') ? L.ContentEnd + 1 : L.ContentEnd;
+            Widest = std::max(Widest, FontBackend->MeasureTextWidth(Font, View.substr(L.ContentStart, End - L.ContentStart)));
         }
+        const float ReportedWidth = AvailableContentSize.X > 0.0f ? std::min(Widest, AvailableContentSize.X) : Widest;
         return {ReportedWidth, WrapLineHeight * static_cast<float>(WrappedLines.size())};
     }
 
     const Render::TextMetrics Metrics = FontBackend->MeasureText(Font, Text);
     float Width = Metrics.WidthLogical;
-    // Clamped here (not just at Draw time) so a truncating Label doesn't blow
-    // out sibling layout by reporting its full unbounded intrinsic width --
-    // the same reasoning IconWidget's own fixed SizeLogical exists for, just
-    // conditional on MaxWidthLogical being set at all.
     if (MaxWidthLogical && Width > *MaxWidthLogical) {
         Width = *MaxWidthLogical;
     }

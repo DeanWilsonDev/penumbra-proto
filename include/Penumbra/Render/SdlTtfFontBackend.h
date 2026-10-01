@@ -31,6 +31,7 @@ private:
     struct LoadedFont {
         TTF_Font* Font;
         float     DpiScaleFactor;
+        TTF_Font* PlainFont;
     };
 
     const LoadedFont* GetFont(FontHandle Handle) const;

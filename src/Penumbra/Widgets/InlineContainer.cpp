@@ -24,13 +24,12 @@ InlineContainer::BuildLines(Point ContentAvailable) const {
         const EdgeInsets Margin = Child->GetMarginLogical();
         const Point ChildAvailable{NonNegative(ContentAvailable.X - Margin.Left - Margin.Right),
                                    NonNegative(ContentAvailable.Y - Margin.Top - Margin.Bottom)};
-        const Point Desired   = Child->Measure(ChildAvailable);
+        Point Desired = Child->Measure(ChildAvailable);
+        if (ChildAvailable.X > 0.0f) {
+            Desired.X = std::min(Desired.X, ChildAvailable.X);
+        }
         const float ItemWidth = Margin.Left + Desired.X + Margin.Right;
 
-        // Wrap before placing if this item would overflow — unless the line is
-        // still empty, in which case it goes on this line regardless (a single
-        // item wider than the container gets its own line, not dropped or looped
-        // forever trying to find room that will never exist).
         if (!CurrentLine.empty() && CursorX + ChildGap + ItemWidth > ContentAvailable.X) {
             Lines.push_back(std::move(CurrentLine));
             CurrentLine.clear();

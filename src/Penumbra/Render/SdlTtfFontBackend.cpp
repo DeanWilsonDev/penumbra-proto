@@ -38,6 +38,9 @@ SdlTtfFontBackend::~SdlTtfFontBackend() {
         if (Loaded.Font) {
             TTF_CloseFont(Loaded.Font);
         }
+        if (Loaded.PlainFont) {
+            TTF_CloseFont(Loaded.PlainFont);
+        }
     }
     Fonts.clear();
 
@@ -55,6 +58,10 @@ FontHandle SdlTtfFontBackend::LoadStyledFont(const char* Path, float PointSizeLo
                                              FontStyle Style) {
     const float Scale = (DpiScaleFactor > 0.0f) ? DpiScaleFactor : 1.0f;
     TTF_Font* Font = TTF_OpenFont(Path, PointSizeLogical * Scale);
+    TTF_Font* PlainFont = nullptr;
+    if (Font && Style != FontStyle{}) {
+        PlainFont = TTF_OpenFont(Path, PointSizeLogical * Scale);
+    }
     if (Font) {
         TTF_FontStyleFlags Flags = TTF_STYLE_NORMAL;
         if (Style.Italic) {
@@ -69,7 +76,7 @@ FontHandle SdlTtfFontBackend::LoadStyledFont(const char* Path, float PointSizeLo
         TTF_SetFontStyle(Font, Flags);
     }
     const auto Handle = static_cast<FontHandle>(Fonts.size());
-    Fonts.push_back({Font, Scale});
+    Fonts.push_back({Font, Scale, PlainFont});
     return Handle;
 }
 
@@ -88,7 +95,8 @@ TextMetrics SdlTtfFontBackend::MeasureText(FontHandle Handle, std::string_view T
 
     int PhysicalWidth = 0;
     int PhysicalHeight = 0;
-    TTF_GetStringSize(Loaded->Font, Text.data(), Text.size(), &PhysicalWidth, &PhysicalHeight);
+    TTF_Font* MeasuringFont = Loaded->PlainFont ? Loaded->PlainFont : Loaded->Font;
+    TTF_GetStringSize(MeasuringFont, Text.data(), Text.size(), &PhysicalWidth, &PhysicalHeight);
 
     const float Scale = Loaded->DpiScaleFactor;
     const float Ascent = static_cast<float>(TTF_GetFontAscent(Loaded->Font));
