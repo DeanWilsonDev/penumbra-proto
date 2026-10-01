@@ -48,8 +48,26 @@ SdlTtfFontBackend::~SdlTtfFontBackend() {
 }
 
 FontHandle SdlTtfFontBackend::LoadFont(const char* Path, float PointSizeLogical, float DpiScaleFactor) {
+    return LoadStyledFont(Path, PointSizeLogical, DpiScaleFactor, FontStyle{});
+}
+
+FontHandle SdlTtfFontBackend::LoadStyledFont(const char* Path, float PointSizeLogical, float DpiScaleFactor,
+                                             FontStyle Style) {
     const float Scale = (DpiScaleFactor > 0.0f) ? DpiScaleFactor : 1.0f;
     TTF_Font* Font = TTF_OpenFont(Path, PointSizeLogical * Scale);
+    if (Font) {
+        TTF_FontStyleFlags Flags = TTF_STYLE_NORMAL;
+        if (Style.Italic) {
+            Flags |= TTF_STYLE_ITALIC;
+        }
+        if (Style.Underline) {
+            Flags |= TTF_STYLE_UNDERLINE;
+        }
+        if (Style.Strikethrough) {
+            Flags |= TTF_STYLE_STRIKETHROUGH;
+        }
+        TTF_SetFontStyle(Font, Flags);
+    }
     const auto Handle = static_cast<FontHandle>(Fonts.size());
     Fonts.push_back({Font, Scale});
     return Handle;

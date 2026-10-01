@@ -22,6 +22,7 @@ public:
     SdlTtfFontBackend& operator=(const SdlTtfFontBackend&) = delete;
 
     FontHandle   LoadFont(const char* Path, float PointSizeLogical, float DpiScaleFactor) override;
+    FontHandle   LoadStyledFont(const char* Path, float PointSizeLogical, float DpiScaleFactor, FontStyle Style) override;
     TextMetrics  MeasureText     (FontHandle, std::string_view) const override;
     float        MeasureTextWidth(FontHandle, std::string_view) const override;
     SDL_Texture* AcquireTextTexture(SDL_Renderer*, FontHandle, std::string_view, SDL_Color) override;
