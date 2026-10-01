@@ -23,17 +23,13 @@ bool IconWidget::UpdateInteractionState(const Platform::InputState& Input) {
         return false;
     }
 
-    // A leaf with no children to give first refusal to. Same inert-unless-opted-in
-    // guard as ImageWidget::UpdateInteractionState -- state tracking below still
-    // runs regardless, so ColorForState() reflects hover/press even for an <Icon>
-    // that opted into none of the callbacks (e.g. DropdownMenuRow's selection-driven
-    // color swap, which reads GetInteractionState() rather than a callback).
-    const bool Hovered  = PointInRect(Input.MousePosition, ArrangedRect);
-    const bool Pressed  = Input.MouseButtonPressedThisFrame[LeftButton];
-    const bool Down     = Input.MouseButtonDown[LeftButton];
-    const bool Released = Input.MouseButtonReleasedThisFrame[LeftButton];
+    const bool HasCallbacks = OnPressed || OnReleased || OnHovered || OnFocused || OnChanged;
+    const bool Hovered      = PointInRect(Input.MousePosition, ArrangedRect);
+    const bool Pressed      = Input.MouseButtonPressedThisFrame[LeftButton];
+    const bool Down         = Input.MouseButtonDown[LeftButton];
+    const bool Released     = Input.MouseButtonReleasedThisFrame[LeftButton];
 
-    if (OnPressed || OnReleased || OnHovered || OnFocused || OnChanged) {
+    if (HasCallbacks) {
         if (Hovered && OnHovered) {
             OnHovered();
         }
@@ -63,7 +59,7 @@ bool IconWidget::UpdateInteractionState(const Platform::InputState& Input) {
         CurrentState = InteractionState::Default;
     }
 
-    return Hovered || (PressedInside && Down);
+    return HasCallbacks && (Hovered || (PressedInside && Down));
 }
 
 Render::Color IconWidget::ColorForState() const {
