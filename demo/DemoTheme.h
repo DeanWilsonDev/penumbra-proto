@@ -36,6 +36,8 @@ struct Theme {
     float TextAreaWheelStep  = 24.0f;  // logical px scrolled per wheel notch in a text area
     float ScrollbarWidth    = 4.0f;    // gutter width for the text area's scroll indicator
     float SeparatorThickness = 2.0f;   // height of a separator Box
+    float IconSize            = 20.0f;
+    float IconStrokeThickness = 1.5f;
 
     float AnimColorSeconds   = 0.09f;  // easing time constant for hover/press colours
 };

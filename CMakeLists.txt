@@ -63,15 +63,14 @@ target_link_libraries(penumbra PUBLIC SDL3::SDL3 SDL3_ttf::SDL3_ttf)
 # own include/link path.
 target_link_libraries(penumbra PRIVATE SDL3_image::SDL3_image)
 
-# ---------------------------------------------------------------------------
-# Demo — executable. The ONLY target that defines values. Links penumbra.
-# ---------------------------------------------------------------------------
+add_subdirectory(icons)
+
 add_executable(penumbra_demo
     demo/main.cpp
     demo/DemoTheme.cpp
     demo/DemoResolvers.cpp)
 
-target_link_libraries(penumbra_demo PRIVATE penumbra)
+target_link_libraries(penumbra_demo PRIVATE penumbra penumbra_icons)
 set_target_properties(penumbra_demo PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/demo")
 

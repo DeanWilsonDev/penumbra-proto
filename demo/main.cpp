@@ -8,6 +8,7 @@
 #include "Penumbra/Widgets/Button.h"
 #include "Penumbra/Widgets/Checkbox.h"
 #include "Penumbra/Widgets/FocusState.h"
+#include "Penumbra/Widgets/IconWidget.h"
 #include "Penumbra/Widgets/Label.h"
 #include "Penumbra/Widgets/NumericDrag.h"
 #include "Penumbra/Widgets/OverlayHost.h"
@@ -16,7 +17,9 @@
 #include "Penumbra/Widgets/TextArea.h"
 #include "Penumbra/Widgets/TextInput.h"
 #include "Penumbra/Widgets/ViewportWidget.h"
+#include "PenumbraIcons/StandardIconBackend.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <functional>
 #include <memory>
@@ -31,6 +34,8 @@ constexpr int WindowLogicalHeight = 560;
 constexpr const char* FontFileName = "JetBrainsMonoNerdFontMono-Regular.ttf";
 
 constexpr int ExtraSettingRows = 16; // filler rows so the column overflows and scrolls
+
+constexpr std::size_t IconsPerRow = 7;
 
 using namespace Penumbra::Widgets;
 
@@ -71,6 +76,8 @@ int main() {
         }
 
         FocusState Focus;
+
+        PenumbraIcons::StandardIconBackend Icons(Theme.IconStrokeThickness, Theme.ColorTextPrimary);
 
         // Every widget that was handed BodyFont, so a DPI-driven font reload (see the
         // frame loop below) has somewhere to deliver the new FontHandle. Penumbra has
@@ -251,6 +258,23 @@ int main() {
             MenuStatusLabel = MenuStatus.get();
             Row->AddChild(std::move(MenuStatus));
             Root->AddChild(std::move(Row));
+        }
+
+        Root->AddChild(MakeSeparator());
+
+        {
+            const auto Names = PenumbraIcons::StandardIconBackend::Names();
+            for (std::size_t First = 0; First < Names.size(); First += IconsPerRow) {
+                auto Row = MakeRow();
+                const std::size_t Last = std::min(First + IconsPerRow, Names.size());
+                for (std::size_t Index = First; Index < Last; ++Index) {
+                    auto Glyph = IconWidget::Builder().icon(std::string(Names[Index])).size(Theme.IconSize).build();
+                    Glyph->IconBackend         = &Icons;
+                    Glyph->ColorLogicalHovered = Theme.ColorAccentHovered;
+                    Row->AddChild(std::move(Glyph));
+                }
+                Root->AddChild(std::move(Row));
+            }
         }
 
         Root->AddChild(MakeSeparator());

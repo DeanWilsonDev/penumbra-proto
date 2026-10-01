@@ -12,13 +12,20 @@ path. The repository contains:
   backends, widgets, and animation.
 - `src/Penumbra/`: implementations. Keep paths paired with their public
   headers where applicable.
+- `icons/`: `PenumbraIcons::StandardIconBackend`, an `IIconBackend` with
+  general UI glyphs (close, chevrons, hamburger, kebab, plus, and so on). It is
+  self-contained so it can move to its own repository: it has its own CMake
+  target, include root and namespace, it depends on `penumbra`, and nothing in
+  the core library may depend on it. Glyph shapes live here; stroke width and
+  default colour come from the consuming app.
 - `demo/`: the normal C++ demo and the theme/style values used to exercise the
   library.
 - `docs`: a tracked symlink to the separate `penumbra-ui-library`
   documentation repository. It may be absent or broken in a standalone clone.
   Treat its contents as design context, not as files owned by this repository.
 
-`penumbra` is the core static library. `penumbra_demo` is the runnable example.
+`penumbra` is the core static library. `penumbra_icons` is the optional icon
+set. `penumbra_demo` is the runnable example.
 
 ## Architectural constraints
 
