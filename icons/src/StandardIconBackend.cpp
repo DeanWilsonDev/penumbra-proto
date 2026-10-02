@@ -4,7 +4,10 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <initializer_list>
+#include <numbers>
+#include <span>
 
 namespace PenumbraIcons {
 
@@ -41,6 +44,27 @@ public:
 
     void Dot(Point GridCenter, float GridRadius) const { Disc(At(GridCenter), GridRadius * Scale + Thickness * 0.5f); }
 
+    void Ring(Point GridCenter, float GridRadius) const {
+        const Point Center = At(GridCenter);
+        const float Radius = GridRadius * Scale + Thickness * 0.5f;
+        Target.DrawRectOutline({Center.X - Radius, Center.Y - Radius, Radius * 2.0f, Radius * 2.0f}, Tint, Thickness,
+                               Radius);
+    }
+
+    void Box(Point GridMin, Point GridMax, float GridCornerRadius) const {
+        const Point Min  = At(GridMin);
+        const Point Max  = At(GridMax);
+        const float Half = Thickness * 0.5f;
+        Target.DrawRectOutline({Min.X - Half, Min.Y - Half, Max.X - Min.X + Thickness, Max.Y - Min.Y + Thickness}, Tint,
+                               Thickness, GridCornerRadius * Scale + Half);
+    }
+
+    void Fill(std::span<const Point> GridPoints) const {
+        for (std::size_t Index = 2; Index < GridPoints.size(); ++Index) {
+            Target.DrawTriangleFilled(At(GridPoints[0]), At(GridPoints[Index - 1]), At(GridPoints[Index]), Tint);
+        }
+    }
+
 private:
     Point At(Point GridPoint) const { return {Origin.X + GridPoint.X * Scale, Origin.Y + GridPoint.Y * Scale}; }
 
@@ -70,6 +94,16 @@ constexpr std::array Glyphs{
     Glyph{"chevron-right", [](const Pen& P) { P.Stroke({{9, 6}, {15, 12}, {9, 18}}); }},
     Glyph{"chevron-up", [](const Pen& P) { P.Stroke({{6, 15}, {12, 9}, {18, 15}}); }},
     Glyph{"chevron-down", [](const Pen& P) { P.Stroke({{6, 9}, {12, 15}, {18, 9}}); }},
+    Glyph{"chevrons-up",
+          [](const Pen& P) {
+              P.Stroke({{6, 12}, {12, 6}, {18, 12}});
+              P.Stroke({{6, 18}, {12, 12}, {18, 18}});
+          }},
+    Glyph{"chevrons-down",
+          [](const Pen& P) {
+              P.Stroke({{6, 6}, {12, 12}, {18, 6}});
+              P.Stroke({{6, 12}, {12, 18}, {18, 12}});
+          }},
     Glyph{"hamburger",
           [](const Pen& P) {
               P.Stroke({{4, 6}, {20, 6}});
@@ -88,6 +122,11 @@ constexpr std::array Glyphs{
               P.Stroke({{5, 12}, {19, 12}});
           }},
     Glyph{"minus", [](const Pen& P) { P.Stroke({{5, 12}, {19, 12}}); }},
+    Glyph{"equals",
+          [](const Pen& P) {
+              P.Stroke({{5, 9}, {19, 9}});
+              P.Stroke({{5, 15}, {19, 15}});
+          }},
     Glyph{"check", [](const Pen& P) { P.Stroke({{4, 12}, {9, 17}, {20, 6}}); }},
     Glyph{"document",
           [](const Pen& P) {
@@ -110,6 +149,53 @@ constexpr std::array Glyphs{
                   P.Dot({4, Y}, 0.5f);
                   P.Stroke({{8, Y}, {20, Y}});
               }
+          }},
+    Glyph{"pencil",
+          [](const Pen& P) {
+              P.Stroke({{15, 4}, {20, 9}, {8, 21}, {3, 21}, {3, 16}, {15, 4}});
+              P.Stroke({{12, 7}, {17, 12}});
+          }},
+    Glyph{"home",
+          [](const Pen& P) {
+              P.Stroke({{3, 10}, {12, 3}, {21, 10}});
+              P.Stroke({{5, 8.5f}, {5, 21}, {19, 21}, {19, 8.5f}});
+              P.Stroke({{10, 21}, {10, 15}, {14, 15}, {14, 21}});
+          }},
+    Glyph{"warning",
+          [](const Pen& P) {
+              P.Stroke({{12, 2}, {23, 21}, {1, 21}, {12, 2}});
+              P.Stroke({{12, 8.5f}, {12, 12.5f}});
+              P.Dot({12, 16.5f}, 0);
+          }},
+    Glyph{"circle", [](const Pen& P) { P.Ring({12, 12}, 9); }},
+    Glyph{"circle-half",
+          [](const Pen& P) {
+              P.Ring({12, 12}, 9);
+              std::array<Point, 13> RightHalf{};
+              for (std::size_t Index = 0; Index < RightHalf.size(); ++Index) {
+                  const float Angle =
+                      std::numbers::pi_v<float> * (static_cast<float>(Index) / (RightHalf.size() - 1) - 0.5f);
+                  RightHalf[Index] = {12 + 9 * std::cos(Angle), 12 + 9 * std::sin(Angle)};
+              }
+              P.Fill(RightHalf);
+              P.Stroke({{12, 3}, {12, 21}});
+          }},
+    Glyph{"circle-check",
+          [](const Pen& P) {
+              P.Ring({12, 12}, 9);
+              P.Stroke({{8, 12.5f}, {11, 15.5f}, {16.5f, 9.5f}});
+          }},
+    Glyph{"bolt", [](const Pen& P) { P.Stroke({{13, 2}, {4, 14}, {12, 14}, {11, 22}, {20, 10}, {12, 10}, {13, 2}}); }},
+    Glyph{"layers",
+          [](const Pen& P) {
+              P.Stroke({{12, 3}, {22, 8.5f}, {12, 14}, {2, 8.5f}, {12, 3}});
+              P.Stroke({{2, 14.5f}, {12, 20}, {22, 14.5f}});
+          }},
+    Glyph{"bookmark", [](const Pen& P) { P.Stroke({{6, 3}, {18, 3}, {18, 21}, {12, 16}, {6, 21}, {6, 3}}); }},
+    Glyph{"square-check",
+          [](const Pen& P) {
+              P.Box({4, 4}, {20, 20}, 3);
+              P.Stroke({{8, 12}, {11, 15}, {16, 9}});
           }},
 };
 
