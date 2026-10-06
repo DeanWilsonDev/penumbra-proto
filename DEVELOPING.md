@@ -5,7 +5,7 @@ project knowledge here rather than in instructions for a specific tool.
 
 ## Project shape
 
-Penumbra is a retained-mode C++20 UI framework built on SDL3's `SDL_Renderer`
+Penumbra is a retained-mode C++26 UI framework built on SDL3's `SDL_Renderer`
 path. The repository contains:
 
 - `include/Penumbra/`: public headers, grouped by platform, rendering,
@@ -51,8 +51,11 @@ current code and CMake configuration where an older design document disagrees.
 
 ## Build and validation
 
-Prerequisites are CMake 3.24 or newer, a C++20 compiler, and SDL3, SDL3_ttf,
-and SDL3_image with CMake package configurations.
+Prerequisites are CMake 3.30 or newer, a C++26 compiler (GCC 14 or later,
+Clang 18 or later, or a recent AppleClang), and SDL3, SDL3_ttf, and SDL3_image
+with CMake package configurations. On Windows, use clang-cl from Clang 18 or
+later; MSVC's cl.exe isn't supported. Configure stops with an error on GCC
+older than 14 or Clang older than 18.
 
 Use an out-of-tree build directory:
 

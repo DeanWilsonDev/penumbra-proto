@@ -1,11 +1,16 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.30)
 
 project(Penumbra
     VERSION 0.0.1
-    DESCRIPTION "Penumbra — retained-mode C++20 UI framework on SDL3"
+    DESCRIPTION "Penumbra — retained-mode C++26 UI framework on SDL3"
     LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+if((CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14)
+   OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 18))
+  message(FATAL_ERROR "Penumbra needs GCC 14 or later or Clang 18 or later; found ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+endif()
+
+set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 

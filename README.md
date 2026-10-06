@@ -1,6 +1,6 @@
 # Penumbra
 
-A retained-mode C++20 UI framework on SDL3 (`SDL_Renderer` path), built to
+A retained-mode C++26 UI framework on SDL3 (`SDL_Renderer` path), built to
 validate the layered architecture described in
 [`docs/penumbra_poc_spec.md`](docs/penumbra_poc_spec.md).
 
@@ -21,8 +21,10 @@ The hard rule: no `SDL_Color` literal and no pixel literal anywhere under
 
 ## Build & run
 
-Requires CMake ≥ 3.24, a C++20 compiler, and SDL3, SDL3_ttf, and SDL3_image
-installed with their CMake config packages.
+Requires CMake ≥ 3.30, a C++26 compiler (GCC 14 or later, Clang 18 or later, or
+a recent AppleClang), and SDL3, SDL3_ttf, and SDL3_image installed with their
+CMake config packages. On Windows, use clang-cl from Clang 18 or later; MSVC's
+cl.exe isn't supported.
 
 ```bash
 # macOS (Homebrew)
