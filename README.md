@@ -21,9 +21,9 @@ The hard rule: no `SDL_Color` literal and no pixel literal anywhere under
 
 ## Build & run
 
-Requires CMake ≥ 3.30, a C++26 compiler (GCC 14 or later, Clang 18 or later, or
+Requires CMake ≥ 3.30, a C++26 compiler (GCC 14 or later, Clang 19 or later, or
 a recent AppleClang), and SDL3, SDL3_ttf, and SDL3_image installed with their
-CMake config packages. On Windows, use clang-cl from Clang 18 or later; MSVC's
+CMake config packages. On Windows, use clang-cl from Clang 19 or later; MSVC's
 cl.exe isn't supported.
 
 ```bash

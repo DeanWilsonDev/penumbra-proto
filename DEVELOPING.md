@@ -52,10 +52,10 @@ current code and CMake configuration where an older design document disagrees.
 ## Build and validation
 
 Prerequisites are CMake 3.30 or newer, a C++26 compiler (GCC 14 or later,
-Clang 18 or later, or a recent AppleClang), and SDL3, SDL3_ttf, and SDL3_image
-with CMake package configurations. On Windows, use clang-cl from Clang 18 or
+Clang 19 or later, or a recent AppleClang), and SDL3, SDL3_ttf, and SDL3_image
+with CMake package configurations. On Windows, use clang-cl from Clang 19 or
 later; MSVC's cl.exe isn't supported. Configure stops with an error on GCC
-older than 14 or Clang older than 18.
+older than 14 or Clang older than 19.
 
 Use an out-of-tree build directory:
 
